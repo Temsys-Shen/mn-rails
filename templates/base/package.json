@@ -1,0 +1,18 @@
+{
+  "name": "marginnote-helloworld",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build-release.js",
+    "dev": "cd src && zip -r -q ../helloworld-dev.mnaddon .",
+    "version": "node scripts/bump-version.js",
+    "version:patch": "node scripts/bump-version.js patch",
+    "version:minor": "node scripts/bump-version.js minor",
+    "version:major": "node scripts/bump-version.js major"
+  },
+  "devDependencies": {
+    "clean-css-cli": "^5.6.3",
+    "html-minifier-terser": "^7.2.0",
+    "terser": "^5.46.0"
+  }
+}

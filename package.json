@@ -1,0 +1,14 @@
+{
+  "name": "mn-rails",
+  "version": "0.1.0",
+  "private": false,
+  "bin": {
+    "mn-rails": "bin/mn-rails.js"
+  },
+  "type": "commonjs",
+  "files": [
+    "bin",
+    "templates"
+  ],
+  "license": "MIT"
+}

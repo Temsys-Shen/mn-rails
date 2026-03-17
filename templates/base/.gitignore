@@ -1,0 +1,4 @@
+node_modules/
+dist/
+*.mnaddon
+.DS_Store

@@ -99,7 +99,7 @@ function generateCiContent(packageManager) {
       ? "- uses: pnpm/action-setup@v4\n        with:\n          version: 9"
       : "";
 
-  return `name: CI\n\non:\n  push:\n  pull_request:\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n${setupStep ? "      " + setupStep + "\n" : ""}      - uses: actions/setup-node@v4\n        with:\n          node-version: 20\n          cache: ${packageManager}\n      - run: ${install}\n      - run: ${runBuild}\n`;
+  return `name: CI\n\non:\n  push:\n    tags:\n      - \"v*\"\n  pull_request:\n\npermissions:\n  contents: write\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n${setupStep ? "      " + setupStep + "\n" : ""}      - uses: actions/setup-node@v4\n        with:\n          node-version: 20\n          cache: ${packageManager}\n      - run: ${install}\n      - run: ${runBuild}\n      - name: Create GitHub Release\n        if: startsWith(github.ref, 'refs/tags/v')\n        uses: softprops/action-gh-release@v2\n        with:\n          files: \"*.mnaddon\"\n          fail_on_unmatched_files: true\n          generate_release_notes: true\n`;
 }
 
 async function main() {
@@ -148,12 +148,13 @@ async function main() {
       .toLowerCase();
     const packageManager = pmInput === "npm" ? "npm" : "pnpm";
 
-    const ciInput = (
-      await question(rl, "generate CI? (y/n) [y]: ")
-    )
-      .trim()
-      .toLowerCase();
-    const generateCi = ciInput === "" || ciInput === "y" || ciInput === "yes";
+    let generateCi = false;
+    if (packageManager === "pnpm") {
+      const ciInput = (await question(rl, "generate CI? (y/n) [y]: "))
+        .trim()
+        .toLowerCase();
+      generateCi = ciInput === "" || ciInput === "y" || ciInput === "yes";
+    }
 
     const templateDir = path.join(__dirname, "..", "templates", "base");
     copyDirectory(templateDir, targetDir);

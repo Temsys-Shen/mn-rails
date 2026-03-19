@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { execSync } = require("child_process");
+const { execFileSync, execSync } = require("child_process");
 
 function copyRecursiveSync(src, dest) {
   if (fs.statSync(src).isDirectory()) {
@@ -25,22 +25,48 @@ function getAllFiles(dir, files = []) {
   return files;
 }
 
+function getLocalBin(rootDir, name) {
+  const binDir = path.join(rootDir, "node_modules", ".bin");
+  const ext = process.platform === "win32" ? ".cmd" : "";
+  return path.join(binDir, `${name}${ext}`);
+}
+
+function runLocalBin(rootDir, name, args) {
+  const binPath = getLocalBin(rootDir, name);
+  execFileSync(binPath, args, { stdio: "ignore" });
+}
+
 function minifyFiles(distDir) {
+  const rootDir = path.join(__dirname, "..");
   const jsFiles = getAllFiles(distDir).filter((f) => f.endsWith(".js"));
   jsFiles.forEach((file) => {
-    execSync(`pnpm exec terser "${file}" -o "${file}" --compress --mangle`);
+    runLocalBin(rootDir, "terser", [
+      file,
+      "-o",
+      file,
+      "--compress",
+      "--mangle",
+    ]);
   });
 
   const htmlFiles = getAllFiles(distDir).filter((f) => f.endsWith(".html"));
   htmlFiles.forEach((file) => {
-    execSync(
-      `pnpm exec html-minifier-terser "${file}" -o "${file}" --collapse-whitespace --remove-comments --minify-js true --minify-css true`,
-    );
+    runLocalBin(rootDir, "html-minifier-terser", [
+      file,
+      "-o",
+      file,
+      "--collapse-whitespace",
+      "--remove-comments",
+      "--minify-js",
+      "true",
+      "--minify-css",
+      "true",
+    ]);
   });
 
   const cssFiles = getAllFiles(distDir).filter((f) => f.endsWith(".css"));
   cssFiles.forEach((file) => {
-    execSync(`pnpm exec cleancss -o "${file}" "${file}"`);
+    runLocalBin(rootDir, "cleancss", ["-o", file, file]);
   });
 }
 

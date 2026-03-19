@@ -1,6 +1,6 @@
 {
   "name": "mn-rails",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": false,
   "bin": {
     "mn-rails": "bin/mn-rails.js"

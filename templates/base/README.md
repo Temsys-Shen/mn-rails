@@ -12,7 +12,7 @@ pnpm install
 npm install
 ```
 
-打包调试包(不压缩，适合频繁迭代)：
+单次热部署到本机MarginNote4并自动重启：
 
 ```bash
 pnpm dev
@@ -20,7 +20,23 @@ pnpm dev
 npm run dev
 ```
 
-打包发布包(先压缩再打包)：
+进入持续监听模式，源码变化后自动同步并重启MarginNote4：
+
+```bash
+pnpm live
+# 或(使用npm时)
+npm run live
+```
+
+停止监听进程并清理锁：
+
+```bash
+pnpm live:stop
+# 或(使用npm时)
+npm run live:stop
+```
+
+打包发布包：
 
 ```bash
 pnpm build
@@ -28,7 +44,7 @@ pnpm build
 npm run build
 ```
 
-在MarginNote4中导入生成的`.mnaddon`并启用即可。
+如果需要安装正式包，再执行`build`后将生成的`.mnaddon`导入MarginNote4。
 
 ## 常用命令
 
@@ -56,3 +72,5 @@ git push --tags
 
 - 请先读`AGENTS.md`，尤其是“只允许在`src/main.js`里调用`JSB.require(...)`”这条
 - MarginNote插件运行在JavaScriptCore环境中，不能按浏览器/Node.js假设(例如没有fetch/DOM/localStorage)
+- `dev`和`live`依赖本机已安装MarginNote4，且会直接同步`src/`到`~/Library/Containers/QReader.MarginStudy.easy/Data/Library/MarginNote Extensions/<addonid>`
+- `live`通过轮询监听变更，可用环境变量`MN_LIVE_POLL_MS`和`MN_LIVE_DEBOUNCE_MS`调整轮询与防抖时间

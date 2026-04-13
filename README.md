@@ -12,6 +12,27 @@ npx mn-rails
 
 按提示输入 `addonid/author/title`等信息后会生成项目目录。
 
+## 更新已有项目模板
+
+在已有项目目录运行：
+
+```bash
+npx mn-rails update
+# 或全局安装后
+mn-rails update
+```
+
+会同步以下内容到当前项目：
+
+- 覆盖更新`AGENTS.md`
+- 覆盖更新模板`scripts`目录下的脚本文件
+- 覆盖更新`package.json`中由模板管理的`scripts`键
+
+保留策略：
+
+- 保留用户自定义的`package.json scripts`键
+- 保留`scripts`目录下不在模板中的用户自定义文件
+
 ## 下一步
 
 进入项目目录：

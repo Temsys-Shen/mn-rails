@@ -58,6 +58,31 @@ function main() {
   const pkg = readJson(pkgPath);
   const addon = readJson(addonPath);
 
+  let inGitRepo = false;
+  try {
+    execSync("git rev-parse --is-inside-work-tree", {
+      stdio: "ignore",
+    });
+    inGitRepo = true;
+  } catch (error) {
+    inGitRepo = false;
+  }
+
+  if (inGitRepo) {
+    const status = execSync("git status --porcelain", {
+      stdio: ["ignore", "pipe", "pipe"],
+    })
+      .toString()
+      .trim();
+
+    if (status) {
+      console.error(
+        "Git working tree is not clean. Please commit or stash changes before bumping version."
+      );
+      process.exit(1);
+    }
+  }
+
   const current = pkg.version || addon.version;
   const next = nextVersion(current, bump);
 
@@ -69,26 +94,9 @@ function main() {
 
   const tagName = `v${next}`;
 
-  try {
-    execSync("git rev-parse --is-inside-work-tree", {
-      stdio: "ignore",
-    });
-  } catch (error) {
+  if (!inGitRepo) {
     console.log(`Version bumped: ${current} -> ${next}`);
     console.log("Git repository not detected, skipped commit and tag.");
-    return;
-  }
-
-  let status = "";
-  try {
-    status = execSync("git status --porcelain").toString().trim();
-  } catch (error) {
-    status = "";
-  }
-
-  if (status) {
-    console.log(`Version bumped: ${current} -> ${next}`);
-    console.log("Git working tree not clean, skipped commit and tag.");
     return;
   }
 

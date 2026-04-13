@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "build": "node scripts/build-release.js",
-    "dev": "cd src && zip -r -q ../helloworld-dev.mnaddon .",
+    "dev": "node scripts/live-deploy.js once",
+    "live": "node scripts/live-deploy.js watch",
+    "live:stop": "node scripts/stop-live.js",
     "version": "node scripts/bump-version.js",
     "version:patch": "node scripts/bump-version.js patch",
     "version:minor": "node scripts/bump-version.js minor",

@@ -1,4 +1,10 @@
-node_modules/
-dist/
-*.mnaddon
+# MacOS
 .DS_Store
+
+# packages
+.pnpm-store
+node_modules
+
+# build artifacts
+dist
+*.mnaddon

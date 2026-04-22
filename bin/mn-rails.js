@@ -402,7 +402,7 @@ async function createProject(options = {}) {
         { name: "web", value: "web", description: "Web addon template with React and Vite" },
         { name: "standard", value: "standard", description: "Standard JavaScriptCore addon template" },
       ],
-      defaultValue: "standard",
+      defaultValue: "web",
       missingTtyHint: "Pass --template standard|web or run mn-rails in a TTY session.",
     });
   }

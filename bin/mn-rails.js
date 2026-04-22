@@ -5,6 +5,26 @@ const path = require("path");
 const readline = require("readline");
 const { execSync } = require("child_process");
 
+const TEMPLATE_PRESETS = {
+  standard: {
+    templateDirName: "base",
+    mainModuleToken: "HelloWorldAddon",
+    createFunctionToken: "createHelloWorldAddon",
+    classTypeToken: "MNHelloWorldAddon",
+    classFileName: "HelloWorldAddon.js",
+    logTagToken: "[HelloWorld]",
+  },
+  web: {
+    templateDirName: "web",
+    mainModuleToken: "WebAddon",
+    createFunctionToken: "createWebAddon",
+    classTypeToken: "MNWebAddon",
+    classFileName: "WebAddon.js",
+    logTagToken: "[WebAddon]",
+    obsoleteScriptKeys: ["live", "live:stop"],
+  },
+};
+
 function createInterface() {
   return readline.createInterface({
     input: process.stdin,
@@ -14,6 +34,64 @@ function createInterface() {
 
 function question(rl, text) {
   return new Promise((resolve) => rl.question(text, resolve));
+}
+
+function normalizeTemplateName(raw) {
+  const input = String(raw || "").trim().toLowerCase();
+  if (!input) return null;
+  if (input === "standard" || input === "base") return "standard";
+  if (input === "web") return "web";
+  return null;
+}
+
+function getTemplatePreset(templateName) {
+  const normalized = normalizeTemplateName(templateName);
+  if (!normalized || !TEMPLATE_PRESETS[normalized]) {
+    throw new Error(`Unsupported template: ${templateName}`);
+  }
+
+  const preset = TEMPLATE_PRESETS[normalized];
+  return {
+    ...preset,
+    templateName: normalized,
+    templateDir: path.join(__dirname, "..", "templates", preset.templateDirName),
+  };
+}
+
+function parseCliArgs(argv) {
+  let command = null;
+  let template = null;
+
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+
+    if (arg === "--template") {
+      const next = argv[i + 1];
+      if (!next || next.startsWith("-")) {
+        throw new Error("Missing value for --template");
+      }
+      template = next;
+      i += 1;
+      continue;
+    }
+
+    if (arg.startsWith("--template=")) {
+      template = arg.slice("--template=".length);
+      continue;
+    }
+
+    if (arg.startsWith("-")) {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+
+    if (command) {
+      throw new Error(`Unexpected argument: ${arg}`);
+    }
+
+    command = arg;
+  }
+
+  return { command, template };
 }
 
 function toPascalCase(input) {
@@ -34,6 +112,12 @@ function toKebabCase(input) {
     .replace(/[^a-z0-9-]/g, "")
     .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+function toSafeIdentifier(input) {
+  const normalized = String(input || "").replace(/[^a-zA-Z0-9_]/g, "_");
+  const safe = /^[a-zA-Z_$]/.test(normalized) ? normalized : `_${normalized}`;
+  return safe || "_WebAddon";
 }
 
 function isDirEmpty(dir) {
@@ -121,12 +205,24 @@ function listFilesRecursively(dir, baseDir = dir) {
   return files;
 }
 
+function readProjectTemplateName(targetPackageJsonPath) {
+  const targetPackageJson = readJsonStrict(targetPackageJsonPath, "Target package.json");
+  const marker = targetPackageJson.mnRails && targetPackageJson.mnRails.template;
+  const normalized = normalizeTemplateName(marker);
+  if (normalized) {
+    return normalized;
+  }
+  return "standard";
+}
+
 function updateTemplateProject() {
   const targetDir = process.cwd();
-  const templateDir = path.join(__dirname, "..", "templates", "base");
+  const targetPackageJsonPath = path.join(targetDir, "package.json");
+  const templateName = readProjectTemplateName(targetPackageJsonPath);
+  const preset = getTemplatePreset(templateName);
+  const templateDir = preset.templateDir;
 
   const templatePackageJsonPath = path.join(templateDir, "package.json");
-  const targetPackageJsonPath = path.join(targetDir, "package.json");
   const templateAgentsPath = path.join(templateDir, "AGENTS.md");
   const targetAgentsPath = path.join(targetDir, "AGENTS.md");
   const templateScriptsDir = path.join(templateDir, "scripts");
@@ -174,10 +270,24 @@ function updateTemplateProject() {
     targetScripts[key] = templatePackageJson.scripts[key];
   });
 
+  const obsoleteScriptKeys = Array.isArray(preset.obsoleteScriptKeys)
+    ? preset.obsoleteScriptKeys
+    : [];
+  obsoleteScriptKeys.forEach((key) => {
+    if (!(key in templatePackageJson.scripts)) {
+      delete targetScripts[key];
+    }
+  });
+
   targetPackageJson.scripts = targetScripts;
+  if (!targetPackageJson.mnRails || typeof targetPackageJson.mnRails !== "object") {
+    targetPackageJson.mnRails = {};
+  }
+  targetPackageJson.mnRails.template = templateName;
   writeJson(targetPackageJsonPath, targetPackageJson);
 
   console.log("Template update completed.");
+  console.log(`template: ${templateName}`);
   console.log("AGENTS.md: updated");
   console.log(
     `scripts files overwritten: ${syncedScriptFiles.length ? syncedScriptFiles.join(", ") : "(none)"}`,
@@ -195,13 +305,38 @@ function generateCiContent(packageManager) {
 
   const setupStep =
     packageManager === "pnpm"
-      ? "- uses: pnpm/action-setup@v4\n        with:\n          version: 9"
+      ? "- uses: pnpm/action-setup@v4\\n        with:\\n          version: 9"
       : "";
 
-  return `name: CI\n\non:\n  push:\n    tags:\n      - \"v*\"\n  pull_request:\n\npermissions:\n  contents: write\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n${setupStep ? "      " + setupStep + "\n" : ""}      - uses: actions/setup-node@v4\n        with:\n          node-version: 20\n          cache: ${packageManager}\n      - run: ${install}\n      - run: ${runBuild}\n      - name: Create GitHub Release\n        if: startsWith(github.ref, 'refs/tags/v')\n        uses: softprops/action-gh-release@v2\n        with:\n          files: \"*.mnaddon\"\n          fail_on_unmatched_files: true\n          generate_release_notes: true\n`;
+  return `name: CI\n\non:\n  push:\n    tags:\n      - \"v*\"\n  pull_request:\n\npermissions:\n  contents: write\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n${setupStep ? "      " + setupStep + "\\n" : ""}      - uses: actions/setup-node@v4\n        with:\n          node-version: 20\n          cache: ${packageManager}\n      - run: ${install}\n      - run: ${runBuild}\n      - name: Create GitHub Release\n        if: startsWith(github.ref, 'refs/tags/v')\n        uses: softprops/action-gh-release@v2\n        with:\n          files: \"*.mnaddon\"\n          fail_on_unmatched_files: true\n          generate_release_notes: true\n`;
 }
 
-async function createProject() {
+function applyWebTemplateNaming(targetDir, className, classFilePath) {
+  const safeClassToken = toSafeIdentifier(className);
+  const webApiGlobal = `__MN_WEB_API_${safeClassToken}`;
+  const bridgeCommandsGlobal = `__MN_WEB_BRIDGE_COMMANDS_${safeClassToken}`;
+  const panelControllerClass = `MNWebPanelController_${safeClassToken}`;
+  const bridgeReceiveFn = `__MNBridgeReceive_${safeClassToken}`;
+  const devServerFn = `__MNGetWebDevServerURL_${safeClassToken}`;
+  const stateKeyPrefix = `mn_web_template_${safeClassToken.toLowerCase()}`;
+
+  const replacements = [
+    [/__MN_WEB_API_GLOBAL__/g, webApiGlobal],
+    [/__MN_WEB_BRIDGE_COMMANDS_GLOBAL__/g, bridgeCommandsGlobal],
+    [/__MN_WEB_PANEL_CONTROLLER_CLASS__/g, panelControllerClass],
+    [/__MN_WEB_BRIDGE_RECEIVE_FN__/g, bridgeReceiveFn],
+    [/__MN_WEB_GET_DEV_SERVER_URL_FN__/g, devServerFn],
+    [/__MN_WEB_STATE_KEY_PREFIX__/g, stateKeyPrefix],
+  ];
+
+  replaceInFile(path.join(targetDir, "src", "WebBridgeCommands.js"), replacements);
+  replaceInFile(path.join(targetDir, "src", "WebPanelController.js"), replacements);
+  replaceInFile(classFilePath, replacements);
+  replaceInFile(path.join(targetDir, "src", "WebDevServerConfig.js"), replacements);
+  replaceInFile(path.join(targetDir, "web", "src", "lib", "mnBridge.js"), replacements);
+}
+
+async function createProject(options = {}) {
   const rl = createInterface();
   const cwd = process.cwd();
   const defaultName = "marginnote-addon";
@@ -215,6 +350,26 @@ async function createProject() {
       console.log("Target directory is not empty. Please choose another name.");
       process.exit(1);
     }
+
+    let templateName = normalizeTemplateName(options.template);
+    if (!templateName) {
+      const templateInput = (
+        await question(rl, "template (standard/web) [standard]: ")
+      )
+        .trim()
+        .toLowerCase();
+
+      if (!templateInput || templateInput === "standard") {
+        templateName = "standard";
+      } else if (templateInput === "web") {
+        templateName = "web";
+      } else {
+        console.log("template must be standard or web.");
+        process.exit(1);
+      }
+    }
+
+    const preset = getTemplatePreset(templateName);
 
     const addonId = (await question(rl, "addonid: ")).trim();
     if (!addonId) {
@@ -255,8 +410,7 @@ async function createProject() {
       generateCi = ciInput === "" || ciInput === "y" || ciInput === "yes";
     }
 
-    const templateDir = path.join(__dirname, "..", "templates", "base");
-    copyDirectory(templateDir, targetDir);
+    copyDirectory(preset.templateDir, targetDir);
 
     const addonName = toKebabCase(title) || "addon";
 
@@ -270,6 +424,10 @@ async function createProject() {
     const packageJsonPath = path.join(targetDir, "package.json");
     const packageJson = readJson(packageJsonPath);
     packageJson.name = addonName;
+    if (!packageJson.mnRails || typeof packageJson.mnRails !== "object") {
+      packageJson.mnRails = {};
+    }
+    packageJson.mnRails.template = templateName;
     writeJson(packageJsonPath, packageJson);
 
     const buildScriptPath = path.join(targetDir, "scripts", "build-release.js");
@@ -277,18 +435,22 @@ async function createProject() {
 
     const mainPath = path.join(targetDir, "src", "main.js");
     replaceInFile(mainPath, [
-      [/HelloWorldAddon/g, className],
-      [/createHelloWorldAddon/g, `create${className}`],
+      [new RegExp(preset.mainModuleToken, "g"), className],
+      [new RegExp(preset.createFunctionToken, "g"), `create${className}`],
     ]);
 
-    const helloPath = path.join(targetDir, "src", "HelloWorldAddon.js");
+    const sourceClassPath = path.join(targetDir, "src", preset.classFileName);
     const classFilePath = path.join(targetDir, "src", `${className}.js`);
-    replaceInFile(helloPath, [
-      [/createHelloWorldAddon/g, `create${className}`],
-      [/MNHelloWorldAddon/g, className],
-      [/\[HelloWorld\]/g, `[${title}]`],
+    replaceInFile(sourceClassPath, [
+      [new RegExp(preset.createFunctionToken, "g"), `create${className}`],
+      [new RegExp(preset.classTypeToken, "g"), className],
+      [new RegExp(preset.logTagToken.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), `[${title}]`],
     ]);
-    fs.renameSync(helloPath, classFilePath);
+    fs.renameSync(sourceClassPath, classFilePath);
+
+    if (templateName === "web") {
+      applyWebTemplateNaming(targetDir, className, classFilePath);
+    }
 
     if (!generateCi) {
       ensureDirRemoved(path.join(targetDir, ".github"));
@@ -312,27 +474,38 @@ async function createProject() {
     }
 
     console.log(`Created: ${targetDir}`);
+    console.log(`Template: ${templateName}`);
   } finally {
     rl.close();
   }
 }
 
+function printUsage() {
+  console.log("Usage:");
+  console.log("  mn-rails [--template standard|web]");
+  console.log("  mn-rails update");
+}
+
 async function main() {
-  const command = process.argv[2];
+  const { command, template } = parseCliArgs(process.argv.slice(2));
 
   if (!command) {
-    await createProject();
+    if (template && !normalizeTemplateName(template)) {
+      throw new Error(`Unsupported template: ${template}`);
+    }
+    await createProject({ template });
     return;
   }
 
   if (command === "update") {
+    if (template) {
+      throw new Error("update does not accept --template. It reads package.json mnRails.template.");
+    }
     updateTemplateProject();
     return;
   }
 
-  console.log("Usage:");
-  console.log("  mn-rails");
-  console.log("  mn-rails update");
+  printUsage();
   process.exit(1);
 }
 

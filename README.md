@@ -22,6 +22,8 @@ npx mn-rails --template standard
 npx mn-rails --template web
 ```
 
+运行`npx mn-rails`时，模板、包管理器、是否生成CI会以终端交互菜单展示，可直接用键盘方向键选择并回车确认。
+
 按提示输入`addonid/author/title`等信息后会生成项目目录。
 
 ## 更新已有项目模板

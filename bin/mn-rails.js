@@ -5,6 +5,8 @@ const path = require("path");
 const readline = require("readline");
 const { execSync } = require("child_process");
 
+let promptModulePromise = null;
+
 const TEMPLATE_PRESETS = {
   standard: {
     templateDirName: "base",
@@ -34,6 +36,49 @@ function createInterface() {
 
 function question(rl, text) {
   return new Promise((resolve) => rl.question(text, resolve));
+}
+
+async function askText(text) {
+  const rl = createInterface();
+  try {
+    return await question(rl, text);
+  } finally {
+    rl.close();
+  }
+}
+
+function ensureInteractiveTerminal(label, hint) {
+  if (process.stdin.isTTY && process.stdout.isTTY) {
+    return;
+  }
+
+  throw new Error(`${label} requires an interactive terminal. ${hint}`);
+}
+
+async function loadPromptModule() {
+  if (!promptModulePromise) {
+    promptModulePromise = import("@inquirer/prompts");
+  }
+  return promptModulePromise;
+}
+
+async function askSelect({ message, choices, defaultValue, missingTtyHint }) {
+  ensureInteractiveTerminal(message, missingTtyHint);
+  const { select } = await loadPromptModule();
+  return select({
+    message,
+    choices,
+    default: defaultValue,
+  });
+}
+
+async function askConfirm({ message, defaultValue, missingTtyHint }) {
+  ensureInteractiveTerminal(message, missingTtyHint);
+  const { confirm } = await loadPromptModule();
+  return confirm({
+    message,
+    default: defaultValue,
+  });
 }
 
 function normalizeTemplateName(raw) {
@@ -337,147 +382,139 @@ function applyWebTemplateNaming(targetDir, className, classFilePath) {
 }
 
 async function createProject(options = {}) {
-  const rl = createInterface();
   const cwd = process.cwd();
   const defaultName = "marginnote-addon";
 
-  try {
-    const nameInput = (await question(rl, `Project name (${defaultName}): `)).trim();
-    const projectName = nameInput || defaultName;
-    const targetDir = projectName === "." ? cwd : path.join(cwd, projectName);
+  const nameInput = (await askText(`Project name (${defaultName}): `)).trim();
+  const projectName = nameInput || defaultName;
+  const targetDir = projectName === "." ? cwd : path.join(cwd, projectName);
 
-    if (fs.existsSync(targetDir) && !isDirEmpty(targetDir)) {
-      console.log("Target directory is not empty. Please choose another name.");
-      process.exit(1);
-    }
-
-    let templateName = normalizeTemplateName(options.template);
-    if (!templateName) {
-      const templateInput = (
-        await question(rl, "template (standard/web) [standard]: ")
-      )
-        .trim()
-        .toLowerCase();
-
-      if (!templateInput || templateInput === "standard") {
-        templateName = "standard";
-      } else if (templateInput === "web") {
-        templateName = "web";
-      } else {
-        console.log("template must be standard or web.");
-        process.exit(1);
-      }
-    }
-
-    const preset = getTemplatePreset(templateName);
-
-    const addonId = (await question(rl, "addonid: ")).trim();
-    if (!addonId) {
-      console.log("addonid is required.");
-      process.exit(1);
-    }
-
-    const author = (await question(rl, "author: ")).trim();
-    if (!author) {
-      console.log("author is required.");
-      process.exit(1);
-    }
-
-    const title = (await question(rl, "title: ")).trim();
-    if (!title) {
-      console.log("title is required.");
-      process.exit(1);
-    }
-
-    const defaultClassName = `MN${toPascalCase(title)}Addon`;
-    const classNameInput = (
-      await question(rl, `class name (${defaultClassName}): `)
-    ).trim();
-    const className = classNameInput || defaultClassName;
-
-    const pmInput = (
-      await question(rl, "package manager (npm/pnpm) [pnpm]: ")
-    )
-      .trim()
-      .toLowerCase();
-    const packageManager = pmInput === "npm" ? "npm" : "pnpm";
-
-    let generateCi = false;
-    if (packageManager === "pnpm") {
-      const ciInput = (await question(rl, "generate CI? (y/n) [y]: "))
-        .trim()
-        .toLowerCase();
-      generateCi = ciInput === "" || ciInput === "y" || ciInput === "yes";
-    }
-
-    copyDirectory(preset.templateDir, targetDir);
-
-    const addonName = toKebabCase(title) || "addon";
-
-    const addonJsonPath = path.join(targetDir, "src", "mnaddon.json");
-    const addonJson = readJson(addonJsonPath);
-    addonJson.addonid = addonId;
-    addonJson.author = author;
-    addonJson.title = title;
-    writeJson(addonJsonPath, addonJson);
-
-    const packageJsonPath = path.join(targetDir, "package.json");
-    const packageJson = readJson(packageJsonPath);
-    packageJson.name = addonName;
-    if (!packageJson.mnRails || typeof packageJson.mnRails !== "object") {
-      packageJson.mnRails = {};
-    }
-    packageJson.mnRails.template = templateName;
-    writeJson(packageJsonPath, packageJson);
-
-    const buildScriptPath = path.join(targetDir, "scripts", "build-release.js");
-    replaceInFile(buildScriptPath, [[/helloworld/g, addonName]]);
-
-    const mainPath = path.join(targetDir, "src", "main.js");
-    replaceInFile(mainPath, [
-      [new RegExp(preset.mainModuleToken, "g"), className],
-      [new RegExp(preset.createFunctionToken, "g"), `create${className}`],
-    ]);
-
-    const sourceClassPath = path.join(targetDir, "src", preset.classFileName);
-    const classFilePath = path.join(targetDir, "src", `${className}.js`);
-    replaceInFile(sourceClassPath, [
-      [new RegExp(preset.createFunctionToken, "g"), `create${className}`],
-      [new RegExp(preset.classTypeToken, "g"), className],
-      [new RegExp(preset.logTagToken.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), `[${title}]`],
-    ]);
-    fs.renameSync(sourceClassPath, classFilePath);
-
-    if (templateName === "web") {
-      applyWebTemplateNaming(targetDir, className, classFilePath);
-    }
-
-    if (!generateCi) {
-      ensureDirRemoved(path.join(targetDir, ".github"));
-    } else {
-      const workflowDir = path.join(targetDir, ".github", "workflows");
-      fs.mkdirSync(workflowDir, { recursive: true });
-      const ciPath = path.join(workflowDir, "ci.yml");
-      fs.writeFileSync(ciPath, generateCiContent(packageManager));
-    }
-
-    try {
-      execSync("git --version", { stdio: "ignore" });
-      execSync("git init", { cwd: targetDir, stdio: "ignore" });
-      execSync("git add .", { cwd: targetDir, stdio: "ignore" });
-      execSync("git commit -m \"init from mn-rails\"", {
-        cwd: targetDir,
-        stdio: "ignore",
-      });
-    } catch (error) {
-      console.log("Git init skipped.");
-    }
-
-    console.log(`Created: ${targetDir}`);
-    console.log(`Template: ${templateName}`);
-  } finally {
-    rl.close();
+  if (fs.existsSync(targetDir) && !isDirEmpty(targetDir)) {
+    console.log("Target directory is not empty. Please choose another name.");
+    process.exit(1);
   }
+
+  let templateName = normalizeTemplateName(options.template);
+  if (!templateName) {
+    templateName = await askSelect({
+      message: "Select template",
+      choices: [
+        { name: "web", value: "web", description: "Web addon template with React and Vite" },
+        { name: "standard", value: "standard", description: "Standard JavaScriptCore addon template" },
+      ],
+      defaultValue: "standard",
+      missingTtyHint: "Pass --template standard|web or run mn-rails in a TTY session.",
+    });
+  }
+
+  const preset = getTemplatePreset(templateName);
+
+  const addonId = (await askText("addonid: ")).trim();
+  if (!addonId) {
+    console.log("addonid is required.");
+    process.exit(1);
+  }
+
+  const author = (await askText("author: ")).trim();
+  if (!author) {
+    console.log("author is required.");
+    process.exit(1);
+  }
+
+  const title = (await askText("title: ")).trim();
+  if (!title) {
+    console.log("title is required.");
+    process.exit(1);
+  }
+
+  const defaultClassName = `MN${toPascalCase(title)}Addon`;
+  const classNameInput = (await askText(`class name (${defaultClassName}): `)).trim();
+  const className = classNameInput || defaultClassName;
+
+  const packageManager = await askSelect({
+    message: "Select package manager",
+    choices: [
+      { name: "pnpm", value: "pnpm", description: "Recommended for the generated template" },
+      { name: "npm", value: "npm", description: "Use npm scripts and lockfile" },
+    ],
+    defaultValue: "pnpm",
+    missingTtyHint: "Run mn-rails in a TTY session to choose a package manager.",
+  });
+
+  let generateCi = false;
+  if (packageManager === "pnpm") {
+    generateCi = await askConfirm({
+      message: "Generate CI workflow?",
+      defaultValue: true,
+      missingTtyHint: "Run mn-rails in a TTY session to choose whether to generate CI.",
+    });
+  }
+
+  copyDirectory(preset.templateDir, targetDir);
+
+  const addonName = toKebabCase(title) || "addon";
+
+  const addonJsonPath = path.join(targetDir, "src", "mnaddon.json");
+  const addonJson = readJson(addonJsonPath);
+  addonJson.addonid = addonId;
+  addonJson.author = author;
+  addonJson.title = title;
+  writeJson(addonJsonPath, addonJson);
+
+  const packageJsonPath = path.join(targetDir, "package.json");
+  const packageJson = readJson(packageJsonPath);
+  packageJson.name = addonName;
+  if (!packageJson.mnRails || typeof packageJson.mnRails !== "object") {
+    packageJson.mnRails = {};
+  }
+  packageJson.mnRails.template = templateName;
+  writeJson(packageJsonPath, packageJson);
+
+  const buildScriptPath = path.join(targetDir, "scripts", "build-release.js");
+  replaceInFile(buildScriptPath, [[/helloworld/g, addonName]]);
+
+  const mainPath = path.join(targetDir, "src", "main.js");
+  replaceInFile(mainPath, [
+    [new RegExp(preset.mainModuleToken, "g"), className],
+    [new RegExp(preset.createFunctionToken, "g"), `create${className}`],
+  ]);
+
+  const sourceClassPath = path.join(targetDir, "src", preset.classFileName);
+  const classFilePath = path.join(targetDir, "src", `${className}.js`);
+  replaceInFile(sourceClassPath, [
+    [new RegExp(preset.createFunctionToken, "g"), `create${className}`],
+    [new RegExp(preset.classTypeToken, "g"), className],
+    [new RegExp(preset.logTagToken.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), `[${title}]`],
+  ]);
+  fs.renameSync(sourceClassPath, classFilePath);
+
+  if (templateName === "web") {
+    applyWebTemplateNaming(targetDir, className, classFilePath);
+  }
+
+  if (!generateCi) {
+    ensureDirRemoved(path.join(targetDir, ".github"));
+  } else {
+    const workflowDir = path.join(targetDir, ".github", "workflows");
+    fs.mkdirSync(workflowDir, { recursive: true });
+    const ciPath = path.join(workflowDir, "ci.yml");
+    fs.writeFileSync(ciPath, generateCiContent(packageManager));
+  }
+
+  try {
+    execSync("git --version", { stdio: "ignore" });
+    execSync("git init", { cwd: targetDir, stdio: "ignore" });
+    execSync("git add .", { cwd: targetDir, stdio: "ignore" });
+    execSync("git commit -m \"init from mn-rails\"", {
+      cwd: targetDir,
+      stdio: "ignore",
+    });
+  } catch (error) {
+    console.log("Git init skipped.");
+  }
+
+  console.log(`Created: ${targetDir}`);
+  console.log(`Template: ${templateName}`);
 }
 
 function printUsage() {

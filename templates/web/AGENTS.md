@@ -56,3 +56,4 @@
   - 前端页面只负责按约定发送 `command`
   - 插件侧在 `src/WebBridgeCommands.js`中添加同名命令函数
 - 不要在前端页面里直接假设可以访问MarginNote原生对象，如 `Application`、`Database`、`Note`、`JSB`；这类能力只能在 `src/`里的插件脚本中使用。
+- 不要修改`src/web-dist/`，而应当修改`web/`目录下的文件

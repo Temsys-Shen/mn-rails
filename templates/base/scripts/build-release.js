@@ -75,9 +75,13 @@ function build() {
   const pkg = JSON.parse(
     fs.readFileSync(path.join(rootDir, "package.json"), "utf8"),
   );
+  if (typeof pkg.name !== "string" || !pkg.name.trim()) {
+    throw new Error("package.json缺少有效name，无法生成发布文件名");
+  }
+  const addonName = pkg.name.trim().replace(/^@/, "").replace(/\//g, "-");
   const distDir = path.join(rootDir, "dist");
   const srcDir = path.join(rootDir, "src");
-  const outputName = `helloworld-v${pkg.version}.mnaddon`;
+  const outputName = `${addonName}-v${pkg.version}.mnaddon`;
   const outputPath = path.join(rootDir, outputName);
 
   if (fs.existsSync(distDir)) {

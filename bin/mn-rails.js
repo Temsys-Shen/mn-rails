@@ -272,7 +272,10 @@ function updateTemplateProject() {
 
   const templatePackageJsonPath = path.join(templateDir, "package.json");
   const templateAgentsPath = path.join(templateDir, "AGENTS.md");
+  const templateGitignorePath = path.join(templateDir, ".gitignore");
+  const templateNpmignorePath = path.join(templateDir, ".npmignore");
   const targetAgentsPath = path.join(targetDir, "AGENTS.md");
+  const targetGitignorePath = path.join(targetDir, ".gitignore");
   const templateScriptsDir = path.join(templateDir, "scripts");
   const targetScriptsDir = path.join(targetDir, "scripts");
 
@@ -294,11 +297,21 @@ function updateTemplateProject() {
     throw new Error(`Template AGENTS.md not found: ${templateAgentsPath}`);
   }
 
+  const templateIgnoreSourcePath = fs.existsSync(templateGitignorePath)
+    ? templateGitignorePath
+    : templateNpmignorePath;
+  if (!fs.existsSync(templateIgnoreSourcePath)) {
+    throw new Error(
+      `Template ignore file not found: ${templateGitignorePath} or ${templateNpmignorePath}`,
+    );
+  }
+
   if (!fs.existsSync(templateScriptsDir)) {
     throw new Error(`Template scripts directory not found: ${templateScriptsDir}`);
   }
 
   fs.copyFileSync(templateAgentsPath, targetAgentsPath);
+  fs.copyFileSync(templateIgnoreSourcePath, targetGitignorePath);
 
   if (!fs.existsSync(targetScriptsDir)) {
     fs.mkdirSync(targetScriptsDir, { recursive: true });
@@ -337,6 +350,7 @@ function updateTemplateProject() {
   console.log("Template update completed.");
   console.log(`template: ${templateName}`);
   console.log("AGENTS.md: updated");
+  console.log(".gitignore: updated");
   console.log(
     `scripts files overwritten: ${syncedScriptFiles.length ? syncedScriptFiles.join(", ") : "(none)"}`,
   );

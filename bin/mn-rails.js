@@ -175,6 +175,8 @@ function copyDirectory(src, dest) {
   }
 
   const entries = fs.readdirSync(src, { withFileTypes: true });
+  const hasGitignore = entries.some((entry) => entry.name === ".gitignore");
+
   entries.forEach((entry) => {
     if (
       entry.name === "node_modules" ||
@@ -187,7 +189,8 @@ function copyDirectory(src, dest) {
     }
 
     const srcPath = path.join(src, entry.name);
-    const destPath = path.join(dest, entry.name);
+    const destName = entry.name === ".npmignore" && !hasGitignore ? ".gitignore" : entry.name;
+    const destPath = path.join(dest, destName);
 
     if (entry.isDirectory()) {
       copyDirectory(srcPath, destPath);

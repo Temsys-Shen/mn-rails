@@ -24,7 +24,7 @@ npm run dev
 
 ## 打包发布
 
-执行 `build`会先运行Web构建，把Vite产物输出到 `src/web-dist`，再打包成 `.mnaddon`：
+执行 `build`会先运行发布态Web构建，把UIWebView兼容的经典离线资源输出到 `src/web-dist`，再打包成 `.mnaddon`：
 
 ```bash
 pnpm build
@@ -75,3 +75,5 @@ Web页面与插件层按以下结构通信：
 - `src/web-dist/`：发布期静态前端产物目录
 - `web/`：React+Vite源码目录
 - `web/src/lib/mnBridge.js`：前端bridge SDK入口，页面和组件直接从这里import
+- `web/vite.config.js`：开发态Vite配置
+- `web/vite.release.config.js`：发布态Vite配置，输出经典单bundle脚本

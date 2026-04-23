@@ -32,6 +32,18 @@ pnpm build
 npm run build
 ```
 
+## 常用命令
+
+更新版本号时会同时修改 `package.json`和 `src/mnaddon.json`：
+
+```bash
+pnpm version:patch
+pnpm version:minor
+pnpm version:major
+```
+
+如果当前目录是干净的git工作区，会自动创建commit并打tag，例如 `v0.2.0`。
+
 ## 桥接协议
 
 Web页面与插件层按以下结构通信：

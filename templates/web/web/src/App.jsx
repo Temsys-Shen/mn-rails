@@ -7,7 +7,6 @@ function App() {
     <div className="app-shell">
       <header className="app-header">
         <h1>MarginNoteWebTemplate</h1>
-        <p>React+ViteWebViewScaffold</p>
       </header>
       <nav className="app-nav">
         <NavLink to="/" end>

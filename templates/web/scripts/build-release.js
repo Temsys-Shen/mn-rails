@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { execFileSync, execSync } = require("child_process");
+const CleanCSS = require("clean-css");
 
 function copyRecursiveSync(src, dest) {
   if (fs.statSync(src).isDirectory()) {
@@ -36,6 +37,17 @@ function runLocalBin(rootDir, name, args) {
   execFileSync(binPath, args, { stdio: "ignore" });
 }
 
+function minifyCssFile(filePath) {
+  const source = fs.readFileSync(filePath, "utf8");
+  const result = new CleanCSS().minify(source);
+
+  if (result.errors.length > 0) {
+    throw new Error(`CSS minify failed for ${filePath}: ${result.errors.join("; ")}`);
+  }
+
+  fs.writeFileSync(filePath, result.styles);
+}
+
 function minifyFiles(distDir) {
   const rootDir = path.join(__dirname, "..");
   const jsFiles = getAllFiles(distDir).filter((f) => f.endsWith(".js"));
@@ -66,7 +78,7 @@ function minifyFiles(distDir) {
 
   const cssFiles = getAllFiles(distDir).filter((f) => f.endsWith(".css"));
   cssFiles.forEach((file) => {
-    runLocalBin(rootDir, "cleancss", ["-o", file, file]);
+    minifyCssFile(file);
   });
 }
 

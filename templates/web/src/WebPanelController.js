@@ -52,7 +52,10 @@ var __MN_WEB_API_GLOBAL__ = (function () {
     const devServerURL = __MN_WEB_GET_DEV_SERVER_URL_FN__();
     if (devServerURL) {
       console.log(`[WebAddon] load dev server: ${devServerURL}`);
-      return devServerURL;
+      return {
+        url: NSURL.URLWithString(devServerURL),
+        kind: "remote",
+      };
     }
 
     const localEntryPath = `${mainPath}/web-dist/index.html`;
@@ -63,9 +66,11 @@ var __MN_WEB_API_GLOBAL__ = (function () {
       );
     }
 
-    const localURL = `file://${localEntryPath}`;
-    console.log(`[WebAddon] load local build: ${localURL}`);
-    return localURL;
+    console.log(`[WebAddon] load local build: ${localEntryPath}`);
+    return {
+      url: NSURL.fileURLWithPath(localEntryPath),
+      kind: "local",
+    };
   }
 
   function sendBridgeResponse(webView, requestId, result, error) {
@@ -343,8 +348,8 @@ var __MN_WEB_API_GLOBAL__ = (function () {
   }
 
   function loadInitialWebPage(controller) {
-    const urlString = resolveWebEntryURL(controller.mainPath);
-    const request = NSURLRequest.requestWithURL(NSURL.URLWithString(urlString));
+    const entry = resolveWebEntryURL(controller.mainPath);
+    const request = NSURLRequest.requestWithURL(entry.url);
     controller.webView.loadRequest(request);
   }
 

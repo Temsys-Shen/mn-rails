@@ -176,6 +176,7 @@ function copyDirectory(src, dest) {
 
   const entries = fs.readdirSync(src, { withFileTypes: true });
   const hasGitignore = entries.some((entry) => entry.name === ".gitignore");
+  const hasGitignoreTmp = entries.some((entry) => entry.name === ".gitignore.tmp");
 
   entries.forEach((entry) => {
     if (
@@ -189,7 +190,12 @@ function copyDirectory(src, dest) {
     }
 
     const srcPath = path.join(src, entry.name);
-    const destName = entry.name === ".npmignore" && !hasGitignore ? ".gitignore" : entry.name;
+    const destName =
+      entry.name === ".gitignore.tmp"
+        ? ".gitignore"
+        : entry.name === ".npmignore" && !hasGitignore && !hasGitignoreTmp
+          ? ".gitignore"
+          : entry.name;
     const destPath = path.join(dest, destName);
 
     if (entry.isDirectory()) {
@@ -272,6 +278,7 @@ function updateTemplateProject() {
 
   const templatePackageJsonPath = path.join(templateDir, "package.json");
   const templateAgentsPath = path.join(templateDir, "AGENTS.md");
+  const templateGitignoreTmpPath = path.join(templateDir, ".gitignore.tmp");
   const templateGitignorePath = path.join(templateDir, ".gitignore");
   const templateNpmignorePath = path.join(templateDir, ".npmignore");
   const targetAgentsPath = path.join(targetDir, "AGENTS.md");
@@ -297,12 +304,14 @@ function updateTemplateProject() {
     throw new Error(`Template AGENTS.md not found: ${templateAgentsPath}`);
   }
 
-  const templateIgnoreSourcePath = fs.existsSync(templateGitignorePath)
-    ? templateGitignorePath
-    : templateNpmignorePath;
+  const templateIgnoreSourcePath = fs.existsSync(templateGitignoreTmpPath)
+    ? templateGitignoreTmpPath
+    : fs.existsSync(templateGitignorePath)
+      ? templateGitignorePath
+      : templateNpmignorePath;
   if (!fs.existsSync(templateIgnoreSourcePath)) {
     throw new Error(
-      `Template ignore file not found: ${templateGitignorePath} or ${templateNpmignorePath}`,
+      `Template ignore file not found: ${templateGitignoreTmpPath} or ${templateGitignorePath} or ${templateNpmignorePath}`,
     );
   }
 

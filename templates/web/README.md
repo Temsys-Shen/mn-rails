@@ -65,7 +65,8 @@ Web页面与插件层按以下结构通信：
 - 右下角拖拽可缩放窗口
 - 标题栏双击可最大化/还原
 - 右下角双击可居中窗口
-- 窗口位置与大小会保存到 `NSUserDefaults`键 `mn_web_template_frame_config`
+- 窗口位置与大小会保存到项目专属 `NSUserDefaults` 键，生成后形如 `mn_web_template_<class>_frame_config`
+- 最大化状态不会作为普通窗口尺寸保存；MarginNote 窗口变化时会保持用户首选尺寸，并自动限制在当前学习区可见范围内
 
 ## 目录说明
 

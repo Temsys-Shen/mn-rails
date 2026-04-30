@@ -223,6 +223,22 @@ function replaceInFile(filePath, replacements) {
   fs.writeFileSync(filePath, content);
 }
 
+function escapeReplacementValue(value) {
+  return String(value).replace(/\$/g, "$$$$");
+}
+
+function escapeJsStringContent(value) {
+  return String(value)
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, "\\\"")
+    .replace(/\r/g, "\\r")
+    .replace(/\n/g, "\\n");
+}
+
+function escapeDoubleQuotedJsReplacement(value) {
+  return escapeReplacementValue(escapeJsStringContent(value));
+}
+
 function ensureDirRemoved(dir) {
   if (!fs.existsSync(dir)) return;
   fs.rmSync(dir, { recursive: true, force: true });
@@ -382,7 +398,7 @@ function generateCiContent(packageManager) {
   return `name: CI\n\non:\n  push:\n    tags:\n      - \"v*\"\n  pull_request:\n\npermissions:\n  contents: write\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n${setupStep ? "      " + setupStep + "\\n" : ""}      - uses: actions/setup-node@v4\n        with:\n          node-version: 20\n          cache: ${packageManager}\n      - run: ${install}\n      - run: ${runBuild}\n      - name: Create GitHub Release\n        if: startsWith(github.ref, 'refs/tags/v')\n        uses: softprops/action-gh-release@v2\n        with:\n          files: \"*.mnaddon\"\n          fail_on_unmatched_files: true\n          generate_release_notes: true\n`;
 }
 
-function applyWebTemplateNaming(targetDir, className, classFilePath) {
+function applyWebTemplateNaming(targetDir, className, classFilePath, title) {
   const safeClassToken = toSafeIdentifier(className);
   const webApiGlobal = `__MN_WEB_API_${safeClassToken}`;
   const bridgeCommandsGlobal = `__MN_WEB_BRIDGE_COMMANDS_${safeClassToken}`;
@@ -390,11 +406,13 @@ function applyWebTemplateNaming(targetDir, className, classFilePath) {
   const bridgeReceiveFn = `__MNBridgeReceive_${safeClassToken}`;
   const devServerFn = `__MNGetWebDevServerURL_${safeClassToken}`;
   const stateKeyPrefix = `mn_web_template_${safeClassToken.toLowerCase()}`;
+  const panelTitle = escapeDoubleQuotedJsReplacement(title);
 
   const replacements = [
     [/__MN_WEB_API_GLOBAL__/g, webApiGlobal],
     [/__MN_WEB_BRIDGE_COMMANDS_GLOBAL__/g, bridgeCommandsGlobal],
     [/__MN_WEB_PANEL_CONTROLLER_CLASS__/g, panelControllerClass],
+    [/__MN_WEB_PANEL_TITLE__/g, panelTitle],
     [/__MN_WEB_BRIDGE_RECEIVE_FN__/g, bridgeReceiveFn],
     [/__MN_WEB_GET_DEV_SERVER_URL_FN__/g, devServerFn],
     [/__MN_WEB_STATE_KEY_PREFIX__/g, stateKeyPrefix],
@@ -507,15 +525,16 @@ async function createProject(options = {}) {
 
   const sourceClassPath = path.join(targetDir, "src", preset.classFileName);
   const classFilePath = path.join(targetDir, "src", `${className}.js`);
+  const logTag = escapeDoubleQuotedJsReplacement(`[${title}]`);
   replaceInFile(sourceClassPath, [
     [new RegExp(preset.createFunctionToken, "g"), `create${className}`],
     [new RegExp(preset.classTypeToken, "g"), className],
-    [new RegExp(preset.logTagToken.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), `[${title}]`],
+    [new RegExp(preset.logTagToken.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), logTag],
   ]);
   fs.renameSync(sourceClassPath, classFilePath);
 
   if (templateName === "web") {
-    applyWebTemplateNaming(targetDir, className, classFilePath);
+    applyWebTemplateNaming(targetDir, className, classFilePath, title);
   }
 
   if (!generateCi) {

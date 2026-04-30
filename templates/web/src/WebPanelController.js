@@ -5,10 +5,11 @@ var __MN_WEB_API_GLOBAL__ = (function () {
   const BRIDGE_SCHEME = "mnaddon";
   const BRIDGE_HOST = "bridge";
 
-  const MIN_WIDTH = 400;
-  const MIN_HEIGHT = 300;
-  const DEFAULT_WIDTH = 400;
-  const DEFAULT_HEIGHT = 480;
+  const MIN_WIDTH = 520;
+  const MIN_HEIGHT = 420;
+  const DEFAULT_WIDTH = 960;
+  const DEFAULT_HEIGHT = 640;
+  const PANEL_MARGIN = 16;
   const TITLE_HEIGHT = 32;
 
   function evaluateScript(webView, script) {
@@ -96,6 +97,7 @@ var __MN_WEB_API_GLOBAL__ = (function () {
   }
 
   function saveWebPanelFrame(controller) {
+    if (controller._isMaximized) return;
     const frame = controller.view.frame;
     const config = {
       x: frame.x,
@@ -104,6 +106,81 @@ var __MN_WEB_API_GLOBAL__ = (function () {
       height: frame.height,
     };
     NSUserDefaults.standardUserDefaults().setObjectForKey(config, FRAME_CONFIG_KEY);
+  }
+
+  function numberOr(value, fallback) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : fallback;
+  }
+
+  function normalizeBounds(bounds) {
+    return {
+      x: numberOr(bounds && bounds.x, 0),
+      y: numberOr(bounds && bounds.y, 0),
+      width: Math.max(0, numberOr(bounds && bounds.width, 0)),
+      height: Math.max(0, numberOr(bounds && bounds.height, 0)),
+    };
+  }
+
+  function createDefaultFrame(bounds) {
+    const safeBounds = normalizeBounds(bounds);
+    const maxWidth = Math.max(320, safeBounds.width - PANEL_MARGIN * 2);
+    const maxHeight = Math.max(260, safeBounds.height - PANEL_MARGIN * 2);
+    const width = Math.min(DEFAULT_WIDTH, maxWidth);
+    const height = Math.min(DEFAULT_HEIGHT, maxHeight);
+
+    return {
+      x: safeBounds.x + Math.max(PANEL_MARGIN, (safeBounds.width - width) / 2),
+      y: safeBounds.y + Math.max(PANEL_MARGIN, (safeBounds.height - height) / 2),
+      width,
+      height,
+    };
+  }
+
+  function isFullscreenLike(frame, bounds) {
+    if (!frame || !bounds) return false;
+    const safeBounds = normalizeBounds(bounds);
+    return Math.abs(numberOr(frame.x, 0) - safeBounds.x) < 1 &&
+      Math.abs(numberOr(frame.y, 0) - safeBounds.y) < 1 &&
+      frame.width >= safeBounds.width - PANEL_MARGIN &&
+      frame.height >= safeBounds.height - PANEL_MARGIN;
+  }
+
+  function normalizePanelFrame(frame, bounds) {
+    const safeBounds = normalizeBounds(bounds);
+    const fallback = createDefaultFrame(safeBounds);
+    const source = frame || fallback;
+    const maxWidth = Math.max(320, safeBounds.width - PANEL_MARGIN * 2);
+    const maxHeight = Math.max(260, safeBounds.height - PANEL_MARGIN * 2);
+    const width = Math.min(Math.max(MIN_WIDTH, numberOr(source.width, fallback.width)), maxWidth);
+    const height = Math.min(Math.max(MIN_HEIGHT, numberOr(source.height, fallback.height)), maxHeight);
+    const minX = safeBounds.x + PANEL_MARGIN;
+    const minY = safeBounds.y + PANEL_MARGIN;
+    const maxX = safeBounds.x + Math.max(PANEL_MARGIN, safeBounds.width - width - PANEL_MARGIN);
+    const maxY = safeBounds.y + Math.max(PANEL_MARGIN, safeBounds.height - height - PANEL_MARGIN);
+
+    return {
+      x: Math.max(minX, Math.min(maxX, numberOr(source.x, fallback.x))),
+      y: Math.max(minY, Math.min(maxY, numberOr(source.y, fallback.y))),
+      width,
+      height,
+    };
+  }
+
+  function framesEqual(left, right) {
+    if (!left || !right) return false;
+    return Math.abs(left.x - right.x) < 0.5 &&
+      Math.abs(left.y - right.y) < 0.5 &&
+      Math.abs(left.width - right.width) < 0.5 &&
+      Math.abs(left.height - right.height) < 0.5;
+  }
+
+  function applyRootFrame(controller, frame, persistPreferred) {
+    controller.view.autoresizingMask = 0;
+    controller.view.frame = frame;
+    if (persistPreferred !== false) {
+      controller._preferredFrame = frame;
+    }
   }
 
   function performCloseWindow(controller) {
@@ -131,19 +208,14 @@ var __MN_WEB_API_GLOBAL__ = (function () {
 
   function applyDefaultFrame(controller) {
     const bounds = getStudyRootBounds(controller);
-    controller.view.frame = {
-      x: (bounds.width - DEFAULT_WIDTH) / 2,
-      y: Math.max(0, bounds.height - DEFAULT_HEIGHT - 20),
-      width: DEFAULT_WIDTH,
-      height: DEFAULT_HEIGHT,
-    };
+    applyRootFrame(controller, createDefaultFrame(bounds), true);
   }
 
   function applySavedOrDefaultFrame(controller) {
     const bounds = getStudyRootBounds(controller);
     const saved = NSUserDefaults.standardUserDefaults().objectForKey(FRAME_CONFIG_KEY);
 
-    if (!saved) {
+    if (!saved || isFullscreenLike(saved, bounds)) {
       applyDefaultFrame(controller);
       return;
     }
@@ -158,21 +230,41 @@ var __MN_WEB_API_GLOBAL__ = (function () {
       return;
     }
 
-    width = Math.max(MIN_WIDTH, width);
-    height = Math.max(MIN_HEIGHT, height);
+    const isInvalid = !Number.isFinite(Number(x)) ||
+      !Number.isFinite(Number(y)) ||
+      !Number.isFinite(Number(width)) ||
+      !Number.isFinite(Number(height));
 
-    const isOutsideScreen =
-      (x + width <= 0) ||
-      (x >= bounds.width) ||
-      (y + height <= 0) ||
-      (y >= bounds.height);
-
-    if (isOutsideScreen) {
+    if (isInvalid) {
       applyDefaultFrame(controller);
       return;
     }
 
-    controller.view.frame = { x, y, width, height };
+    applyRootFrame(controller, normalizePanelFrame({ x, y, width, height }, bounds), true);
+  }
+
+  function keepPanelWithinStudyBounds(controller) {
+    if (!controller.view || !controller.view.superview) return;
+    const bounds = getStudyRootBounds(controller);
+
+    if (controller._isMaximized) {
+      const maximizedFrame = {
+        x: bounds.x,
+        y: bounds.y,
+        width: bounds.width,
+        height: bounds.height,
+      };
+      if (!framesEqual(controller.view.frame, maximizedFrame)) {
+        applyRootFrame(controller, maximizedFrame, false);
+      }
+      return;
+    }
+
+    const preferred = controller._preferredFrame || controller.view.frame || createDefaultFrame(bounds);
+    const normalized = normalizePanelFrame(preferred, bounds);
+    if (!framesEqual(controller.view.frame, normalized)) {
+      applyRootFrame(controller, normalized, false);
+    }
   }
 
   function refreshWebPanelLayout(controller) {
@@ -212,7 +304,8 @@ var __MN_WEB_API_GLOBAL__ = (function () {
   }
 
   function setupWebPanelUI(controller) {
-    controller.navigationItem.title = "WebTemplate";
+    controller.navigationItem.title = "__MN_WEB_PANEL_TITLE__";
+    controller.view.autoresizingMask = 0;
     controller.view.backgroundColor = UIColor.clearColor();
     controller.view.layer.shadowOffset = { width: 0, height: 2 };
     controller.view.layer.shadowRadius = 4;
@@ -220,9 +313,8 @@ var __MN_WEB_API_GLOBAL__ = (function () {
     controller.view.layer.shadowColor = UIColor.blackColor();
     controller.view.layer.masksToBounds = false;
 
-    const bounds = controller.view.bounds;
-    const initWidth = bounds.width > 0 ? Math.max(MIN_WIDTH, bounds.width) : DEFAULT_WIDTH;
-    const initHeight = bounds.height > 0 ? Math.max(MIN_HEIGHT, bounds.height) : DEFAULT_HEIGHT;
+    const initWidth = DEFAULT_WIDTH;
+    const initHeight = DEFAULT_HEIGHT;
 
     controller._isMaximized = false;
 
@@ -240,7 +332,7 @@ var __MN_WEB_API_GLOBAL__ = (function () {
     controller.titleBar.autoresizingMask = (1 << 1);
 
     controller.titleLabel = new UILabel({ x: 40, y: 0, width: initWidth - 80, height: TITLE_HEIGHT });
-    controller.titleLabel.text = "WebTemplate";
+    controller.titleLabel.text = "__MN_WEB_PANEL_TITLE__";
     controller.titleLabel.textAlignment = 1;
     controller.titleLabel.font = UIFont.boldSystemFontOfSize(14);
     controller.titleLabel.textColor = UIColor.darkGrayColor();
@@ -309,20 +401,16 @@ var __MN_WEB_API_GLOBAL__ = (function () {
     const bounds = superview ? superview.bounds : { x: 0, y: 0, width: 1920, height: 1080 };
 
     if (!controller._isMaximized) {
-      controller.view.frame = {
+      controller._preMaxFrame = controller._preferredFrame || controller.view.frame;
+      applyRootFrame(controller, {
         x: bounds.x,
         y: bounds.y,
         width: bounds.width,
         height: bounds.height,
-      };
+      }, false);
       controller._isMaximized = true;
     } else {
-      controller.view.frame = {
-        x: (bounds.width - DEFAULT_WIDTH) / 2,
-        y: (bounds.height - DEFAULT_HEIGHT) / 2,
-        width: DEFAULT_WIDTH,
-        height: DEFAULT_HEIGHT,
-      };
+      applyRootFrame(controller, normalizePanelFrame(controller._preMaxFrame, bounds), true);
       controller._isMaximized = false;
     }
 
@@ -360,6 +448,7 @@ var __MN_WEB_API_GLOBAL__ = (function () {
     },
 
     viewDidLayoutSubviews: function () {
+      keepPanelWithinStudyBounds(self);
       refreshWebPanelLayout(self);
     },
 
@@ -387,6 +476,7 @@ var __MN_WEB_API_GLOBAL__ = (function () {
       nextCenter.y = Math.max(minY, Math.min(maxY, nextCenter.y));
 
       self.view.center = nextCenter;
+      self._preferredFrame = self.view.frame;
       recognizer.setTranslationInView({ x: 0, y: 0 }, self.view.superview);
 
       if (recognizer.state === 3) {
@@ -430,6 +520,7 @@ var __MN_WEB_API_GLOBAL__ = (function () {
           width,
           height,
         };
+        self._preferredFrame = self.view.frame;
         self.view.setNeedsLayout();
         return;
       }
@@ -447,6 +538,7 @@ var __MN_WEB_API_GLOBAL__ = (function () {
         x: bounds.x + bounds.width / 2,
         y: bounds.y + bounds.height / 2,
       };
+      self._preferredFrame = self.view.frame;
       saveWebPanelFrame(self);
     },
 
@@ -537,6 +629,8 @@ var __MN_WEB_API_GLOBAL__ = (function () {
       studyController.view.addSubview(controller.view);
     }
 
+    controller.view.autoresizingMask = 0;
+    controller._isMaximized = false;
     applySavedOrDefaultFrame(controller);
     controller.view.hidden = false;
     NSUserDefaults.standardUserDefaults().setObjectForKey(true, PANEL_ON_KEY);
@@ -551,10 +645,16 @@ var __MN_WEB_API_GLOBAL__ = (function () {
   }
 
   function ensureLayout(controller) {
-    if (!controller.view || controller.view.frame.width !== 0) {
+    if (!controller.view) {
       return;
     }
-    applySavedOrDefaultFrame(controller);
+    controller.view.autoresizingMask = 0;
+    if (controller.view.frame.width === 0) {
+      applySavedOrDefaultFrame(controller);
+      return;
+    }
+    keepPanelWithinStudyBounds(controller);
+    refreshWebPanelLayout(controller);
   }
 
   return {

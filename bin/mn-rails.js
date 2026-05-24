@@ -392,10 +392,14 @@ function generateCiContent(packageManager) {
 
   const setupStep =
     packageManager === "pnpm"
-      ? "- uses: pnpm/action-setup@v4\\n        with:\\n          version: 9"
+      ? [
+          "      - uses: pnpm/action-setup@v4",
+          "        with:",
+          "          version: 9",
+        ].join("\n") + "\n"
       : "";
 
-  return `name: CI\n\non:\n  push:\n    tags:\n      - \"v*\"\n  pull_request:\n\npermissions:\n  contents: write\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n${setupStep ? "      " + setupStep + "\\n" : ""}      - uses: actions/setup-node@v4\n        with:\n          node-version: 20\n          cache: ${packageManager}\n      - run: ${install}\n      - run: ${runBuild}\n      - name: Create GitHub Release\n        if: startsWith(github.ref, 'refs/tags/v')\n        uses: softprops/action-gh-release@v2\n        with:\n          files: \"*.mnaddon\"\n          fail_on_unmatched_files: true\n          generate_release_notes: true\n`;
+  return `name: CI\n\non:\n  push:\n    tags:\n      - \"v*\"\n  pull_request:\n\npermissions:\n  contents: write\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n${setupStep}      - uses: actions/setup-node@v4\n        with:\n          node-version: 20\n          cache: ${packageManager}\n      - run: ${install}\n      - run: ${runBuild}\n      - name: Create GitHub Release\n        if: startsWith(github.ref, 'refs/tags/v')\n        uses: softprops/action-gh-release@v2\n        with:\n          files: \"*.mnaddon\"\n          fail_on_unmatched_files: true\n          generate_release_notes: true\n`;
 }
 
 function applyWebTemplateNaming(targetDir, className, classFilePath, title) {

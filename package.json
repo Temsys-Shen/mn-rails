@@ -35,6 +35,8 @@
     "check": "tsc --noEmit",
     "test": "vitest run",
     "pack:check": "pnpm check && pnpm test && pnpm build && node scripts/check-package-contents.mjs && node scripts/check-create-package.mjs",
+    "release:pack": "node scripts/pack-release.mjs",
+    "release:check": "pnpm pack:check && node scripts/check-release-tag.mjs && node scripts/pack-release.mjs",
     "prepublishOnly": "pnpm pack:check"
   },
   "dependencies": {

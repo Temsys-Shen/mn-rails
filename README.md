@@ -98,6 +98,25 @@ pnpm pack:check
 
 这条命令执行类型检查、单元测试、构建，并检查 `mn-rails` 与 `create-mn-rails` 两个发布包的内容、版本和 `bin` 映射。
 
+生成待发布的包：
+
+```bash
+pnpm release:pack
+```
+
+这条命令调用 pnpm 打包两个工作区，把 `workspace:*` 改写为固定版本，校验包内清单与文件，并把产物写入 `release/`。`release/manifest.json` 记录文件大小、条目数量与 `sha512` 完整性。
+
+发布由标签触发。先确认工作区干净，再执行：
+
+```bash
+git tag v2.0.0
+git push origin v2.0.0
+```
+
+发布流程依次检查类型、测试、构建、包内容、标签与版本，上传 `mn-rails`，等待注册表可见，然后上传 `create-mn-rails`。两个包都使用 npm 的可信发布与 provenance 证明。
+
+`create-mn-rails` 首次发布之前，需要在 npm 网站上为这个包添加可信发布者配置。发布者指向本仓库的 GitHub Actions 工作流 `publish.yml`。
+
 ## 与旧版的关系
 
 `mn-rails@2` 不保留 `mn-rails@1` 的 `standard`、`web` 模板，也不提供模板更新命令。旧工程需要新建 v2 工程并迁移业务代码。

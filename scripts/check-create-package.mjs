@@ -1,15 +1,15 @@
 import { execFileSync } from "node:child_process";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, extname, join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const temporary = await mkdtemp(join(tmpdir(), "create-mn-rails-pack-"));
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
-const packCommand = resolvePackCommand();
 
 try {
-  execFileSync(packCommand.file, [...packCommand.args, "pack", "--pack-destination", temporary], {
+  // 必须使用 pnpm：npm pack 不会把 workspace:* 改写为发布版本。
+  execFileSync("pnpm", ["pack", "--pack-destination", temporary], {
     cwd: join(repositoryRoot, "create"),
     stdio: "inherit",
   });
@@ -55,16 +55,4 @@ try {
   console.log(`create-mn-rails 发布包检查通过：${packed}，${entries.length} 个条目`);
 } finally {
   await rm(temporary, { recursive: true, force: true });
-}
-
-function resolvePackCommand() {
-  const execPath = process.env.npm_execpath;
-  if (execPath) {
-    const extension = extname(execPath).toLowerCase();
-    if (extension === ".js" || extension === ".cjs" || extension === ".mjs") {
-      return { file: process.execPath, args: [execPath] };
-    }
-    return { file: execPath, args: [] };
-  }
-  return { file: "pnpm", args: [] };
 }

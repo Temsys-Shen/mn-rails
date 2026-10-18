@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   id-token: write
@@ -26,21 +27,32 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm pack:check
+      - name: 运行完整发布检查
+        run: pnpm pack:check
 
-      - run: pnpm publish --access public --no-git-checks
+      - name: 确认标签与包版本一致
+        if: github.event_name == 'push'
+        run: node scripts/check-release-tag.mjs
 
-      # 发布 create 包前，先确认注册表已经能读取上一包。
-      # 否则用户触发 npm create mn-rails 时，可能出现 mn-rails 依赖解析失败。
+      - name: 生成待发布的包
+        run: node scripts/pack-release.mjs
+
+      # pnpm 负责在打包阶段改写 workspace:*；npm 负责上传，沿用本仓库已经验证过的 OIDC 发布路径。
+      - name: 发布 mn-rails
+        if: github.event_name == 'push'
+        run: npm publish "$PWD/release/mn-rails.tgz" --access public --provenance
+
       - name: 等待 mn-rails 对注册表可见
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          for attempt in 1 2 3 4 5 6; do
-            if npm view "mn-rails@${VERSION}" version; then
-              exit 0
-            fi
-            sleep 10
-          done
-          exit 1
+        if: github.event_name == 'push'
+        run: node scripts/wait-for-release.mjs mn-rails
 
-      - run: pnpm --dir create publish --access public --no-git-checks
+      - name: 发布 create-mn-rails
+        if: github.event_name == 'push'
+        run: npm publish "$PWD/release/create-mn-rails.tgz" --access public --provenance
+
+      - name: 等待 create-mn-rails 对注册表可见
+        if: github.event_name == 'push'
+        run: node scripts/wait-for-release.mjs create-mn-rails
+
+      - name: 输出发布摘要
+        run: node scripts/release-summary.mjs

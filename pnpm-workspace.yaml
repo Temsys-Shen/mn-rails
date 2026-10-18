@@ -1,0 +1,6 @@
+packages:
+  - "."
+  - "create"
+
+allowBuilds:
+  esbuild: true

@@ -1,21 +1,55 @@
 {
   "name": "mn-rails",
-  "version": "0.5.8",
-  "private": false,
+  "version": "2.0.0",
+  "description": "MarginNote 面板插件的现代脚手架",
+  "type": "module",
   "bin": {
     "mn-rails": "bin/mn-rails.js"
   },
-  "type": "commonjs",
   "files": [
     "bin",
-    "templates"
+    "dist",
+    "templates/**",
+    "README.md"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./vite": {
+      "types": "./dist/vite.d.ts",
+      "import": "./dist/vite.js"
+    }
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/Temsys-Shen/mn-rails"
   },
   "license": "MIT",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "build": "tsup",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "pack:check": "pnpm check && pnpm test && pnpm build && node scripts/check-package-contents.mjs && node scripts/check-create-package.mjs",
+    "prepublishOnly": "pnpm pack:check"
+  },
   "dependencies": {
-    "@inquirer/prompts": "^8.4.2"
+    "@inquirer/prompts": "^8.7.3",
+    "commander": "^14.0.3",
+    "fflate": "^0.8.3",
+    "parse5": "^8.0.1",
+    "postcss": "^8.5.30",
+    "postcss-value-parser": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsup": "^8.5.0",
+    "typescript": "5.9.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
   }
 }

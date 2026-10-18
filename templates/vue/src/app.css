@@ -1,0 +1,98 @@
+:root {
+  color-scheme: light dark;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+}
+
+html {
+  background: #f6f4ef;
+}
+
+body {
+  margin: 0;
+  padding: calc(var(--mn-drag-h, 0px) + 14px) 16px 20px;
+  color: #282621;
+}
+
+.panel {
+  display: grid;
+  gap: 12px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.topic {
+  margin: 0;
+  color: #6d675f;
+  font-size: 12px;
+}
+
+.bridge {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px dashed #cec6bb;
+  border-radius: 8px;
+}
+
+.bridge output {
+  overflow-wrap: anywhere;
+  color: #6d655b;
+  font: 12px/1.5 ui-monospace, Menlo, monospace;
+}
+
+.cards {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cards li {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid #ddd7cd;
+  border-radius: 8px;
+}
+
+.cards span {
+  color: #7b7367;
+  font-size: 12px;
+}
+
+button {
+  padding: 6px 10px;
+  border: 1px solid #cec6bb;
+  border-radius: 6px;
+  background: #fff;
+  color: inherit;
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    background: #211f1c;
+  }
+
+  body {
+    color: #eee8df;
+  }
+
+  .cards li {
+    border-color: #47413a;
+  }
+
+  button {
+    border-color: #514b44;
+    background: #2b2824;
+  }
+}

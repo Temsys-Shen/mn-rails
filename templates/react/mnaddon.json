@@ -1,0 +1,27 @@
+{
+  "addonid": "__ADDON_ID__",
+  "author": "__AUTHOR__",
+  "title": "__PROJECT_TITLE__",
+  "version": "0.1.0",
+  "marginnote_version_min": "4.5.0",
+  "immersiveOnly": true,
+  "panel": "index.html",
+  "icon": "icon.png",
+  "panelWidth": 420,
+  "panelMaxHeight": 680,
+  "events": [
+    "excerpt"
+  ],
+  "cardCommands": [
+    {
+      "id": "annotate",
+      "title": {
+        "zh-Hans": "写入批注",
+        "en": "Add a comment"
+      },
+      "when": {
+        "hasExcerpt": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "id": "__TEMPLATE_ID__",
+  "name": "__PROJECT_TITLE__",
+  "plugins": [
+    "__ADDON_ID__"
+  ],
+  "pluginConfigs": {
+    "__ADDON_ID__": {}
+  },
+  "bottom": {
+    "modes": [
+      {
+        "id": "collect",
+        "behavior": "write",
+        "tools": [
+          "tool.excerptBox",
+          "addon.__ADDON_ID__.primary",
+          "theme"
+        ]
+      }
+    ]
+  },
+  "selectionMenu": {
+    "cards": [
+      "noteHighlight:",
+      "commentNote",
+      "addon.__ADDON_ID__.annotate:"
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "create-mn-rails",
+  "version": "2.0.0",
+  "description": "创建 MarginNote 面板插件工程",
+  "type": "module",
+  "bin": {
+    "create-mn-rails": "bin/create-mn-rails.js"
+  },
+  "files": [
+    "bin"
+  ],
+  "dependencies": {
+    "mn-rails": "workspace:*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Temsys-Shen/mn-rails"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "prepublishOnly": "node ../scripts/check-create-package.mjs"
+  }
+}

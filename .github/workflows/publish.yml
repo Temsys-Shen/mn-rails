@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 permissions:
-  id-token: write  # Required for OIDC
+  id-token: write
   contents: read
 
 jobs:
@@ -19,4 +19,28 @@ jobs:
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
-      - run: npm publish
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm pack:check
+
+      - run: pnpm publish --access public --no-git-checks
+
+      # 发布 create 包前，先确认注册表已经能读取上一包。
+      # 否则用户触发 npm create mn-rails 时，可能出现 mn-rails 依赖解析失败。
+      - name: 等待 mn-rails 对注册表可见
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          for attempt in 1 2 3 4 5 6; do
+            if npm view "mn-rails@${VERSION}" version; then
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1
+
+      - run: pnpm --dir create publish --access public --no-git-checks

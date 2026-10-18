@@ -1,5 +1,0 @@
-node_modules/
-dist/
-*.mnaddon
-.DS_Store
-src/web-dist/

@@ -42,7 +42,7 @@ export interface InitOptions {
 interface InitTargetOptions {
   directory?: string | undefined;
   invocationDir?: string | undefined;
-  defaultProjectDirectory?: string | undefined;
+  projectDirectory?: string | undefined;
 }
 
 export interface InitTarget {
@@ -62,9 +62,8 @@ export async function initProject(options: InitOptions): Promise<void> {
   const { targetDir } = await resolveInitTarget(
     {
       directory: options.directory,
-      defaultProjectDirectory: defaultProjectDirectoryName(addonid),
+      projectDirectory: projectDirectoryFromTitle(title),
     },
-    askProjectDirectory,
   );
   const projectName = toPackageName(basename(targetDir));
   const templateId = toTemplateId(addonid);
@@ -136,7 +135,6 @@ export async function initProject(options: InitOptions): Promise<void> {
 
 export async function resolveInitTarget(
   options: InitTargetOptions,
-  chooseProjectDirectory: (defaultName: string) => Promise<string>,
 ): Promise<InitTarget> {
   const invocationDir = resolve(
     options.invocationDir ?? process.env.INIT_CWD ?? process.cwd(),
@@ -158,7 +156,7 @@ export async function resolveInitTarget(
   }
 
   const projectDirectory = validateProjectDirectoryName(
-    await chooseProjectDirectory(options.defaultProjectDirectory ?? "mn-addon"),
+    options.projectDirectory ?? "mn-addon",
   );
   const subdirectory = resolve(invocationDir, projectDirectory);
   if (!(await isDirectoryEmpty(subdirectory))) {
@@ -227,28 +225,34 @@ async function resolveManager(value: string | undefined): Promise<PackageManager
 }
 
 async function askTitle(): Promise<string> {
-  const title = (await input({ message: "插件名称" })).trim();
-  if (!title) fail("插件名称不能为空");
-  return title;
+  return askRequired("插件名称");
 }
 
 async function askAddonId(): Promise<string> {
-  const value = (await input({ message: "插件标识（例如 com.example.mn-panel）" })).trim();
-  if (!value) fail("插件标识不能为空");
-  return value;
+  const value = await input({
+    message: "插件标识（例如 com.example.mn-panel）",
+    validate: (inputValue) => {
+      const trimmed = inputValue.trim();
+      if (!trimmed) return "插件标识不能为空";
+      return isValidAddonId(trimmed)
+        ? true
+        : "插件标识只能包含字母、数字、下划线、点和短横线，并且不能以符号开头。";
+    },
+  });
+  return value.trim();
 }
 
 async function askAuthor(): Promise<string> {
-  const value = (await input({ message: "作者" })).trim();
-  if (!value) fail("作者不能为空");
-  return value;
+  return askRequired("作者");
 }
 
-async function askProjectDirectory(defaultName: string): Promise<string> {
-  return input({
-    message: "项目目录",
-    default: defaultName,
+async function askRequired(message: string): Promise<string> {
+  const value = await input({
+    message,
+    validate: (inputValue) =>
+      inputValue.trim() ? true : `${message}不能为空`,
   });
+  return value.trim();
 }
 
 function validateProjectDirectoryName(value: string): string {
@@ -268,19 +272,27 @@ function validateProjectDirectoryName(value: string): string {
   return name;
 }
 
-function defaultProjectDirectoryName(addonid: string): string {
-  const name = addonid.split(".").at(-1) ?? "";
-  const slug = toPackageName(name);
-  return slug === "mn-panel-addon" ? "mn-addon" : slug;
+function projectDirectoryFromTitle(title: string): string {
+  const name = title
+    .trim()
+    .replace(/[\\/:*?"<>|]/g, "-")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^[.-]+|[.-]+$/g, "");
+  return name || "mn-addon";
 }
 
 function validateAddonId(value: string): void {
-  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value)) {
+  if (!isValidAddonId(value)) {
     fail(
       `插件标识不合法：${value}`,
       "插件标识只能包含字母、数字、下划线、点和短横线，并且不能以符号开头。",
     );
   }
+}
+
+function isValidAddonId(value: string): boolean {
+  return /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value);
 }
 
 function toPackageName(value: string): string {

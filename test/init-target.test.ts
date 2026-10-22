@@ -26,31 +26,20 @@ describe("resolveInitTarget", () => {
   it("当前目录只有隐藏项时直接使用当前目录", async () => {
     const dir = await temporaryDirectory();
     await mkdir(join(dir, ".git"));
-    let promptCount = 0;
 
-    const result = await resolveInitTarget(
-      { invocationDir: dir, defaultProjectDirectory: "my-addon" },
-      async () => {
-        promptCount += 1;
-        return "unused";
-      },
-    );
+    const result = await resolveInitTarget({ invocationDir: dir });
 
     expect(result).toEqual({ targetDir: dir, createsSubdirectory: false });
-    expect(promptCount).toBe(0);
   });
 
   it("当前目录非空时在当前目录下创建子目录", async () => {
     const dir = await temporaryDirectory();
     await writeFile(join(dir, "README.md"), "existing\n");
 
-    const result = await resolveInitTarget(
-      { invocationDir: dir, defaultProjectDirectory: "my-addon" },
-      async (defaultName) => {
-        expect(defaultName).toBe("my-addon");
-        return "new-addon";
-      },
-    );
+    const result = await resolveInitTarget({
+      invocationDir: dir,
+      projectDirectory: "new-addon",
+    });
 
     expect(result).toEqual({
       targetDir: join(dir, "new-addon"),
@@ -65,10 +54,7 @@ describe("resolveInitTarget", () => {
     await writeFile(join(existing, "README.md"), "existing\n");
 
     await expect(
-      resolveInitTarget(
-        { invocationDir: dir, directory: "existing" },
-        async () => "unused",
-      ),
+      resolveInitTarget({ invocationDir: dir, directory: "existing" }),
     ).rejects.toThrow("目标目录不是空目录");
   });
 
@@ -80,10 +66,10 @@ describe("resolveInitTarget", () => {
     await writeFile(join(occupied, "package.json"), "{}\n");
 
     await expect(
-      resolveInitTarget(
-        { invocationDir: dir },
-        async () => "new-addon",
-      ),
+      resolveInitTarget({
+        invocationDir: dir,
+        projectDirectory: "new-addon",
+      }),
     ).rejects.toThrow("项目目录不是空目录");
   });
 
@@ -92,10 +78,10 @@ describe("resolveInitTarget", () => {
     await writeFile(join(dir, "README.md"), "existing\n");
 
     await expect(
-      resolveInitTarget(
-        { invocationDir: dir },
-        async () => "../outside",
-      ),
+      resolveInitTarget({
+        invocationDir: dir,
+        projectDirectory: "../outside",
+      }),
     ).rejects.toThrow("项目目录名称不合法");
   });
 });

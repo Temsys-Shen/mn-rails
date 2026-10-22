@@ -54,4 +54,30 @@ describe("initProject", () => {
       code: "ENOENT",
     });
   });
+
+  it("当前目录非空时使用插件名称创建子目录", async () => {
+    const dir = await temporaryDirectory();
+    await writeFile(join(dir, "README.md"), "existing\n");
+    vi.stubEnv("INIT_CWD", dir);
+
+    await initProject({
+      framework: "vue",
+      kind: "panel",
+      addonid: "top.museday.mn-test",
+      author: "ssc",
+      title: "test-mn-new",
+      packageManager: "pnpm",
+      install: false,
+      git: false,
+    });
+
+    const packageJson = JSON.parse(
+      await readFile(join(dir, "test-mn-new", "package.json"), "utf8"),
+    ) as { name?: string };
+
+    expect(packageJson.name).toBe("test-mn-new");
+    await expect(readFile(join(dir, "README.md"), "utf8")).resolves.toBe(
+      "existing\n",
+    );
+  });
 });

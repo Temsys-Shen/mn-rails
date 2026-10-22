@@ -18,7 +18,7 @@ if (!expected) {
 }
 
 const registry = process.env.RELEASE_REGISTRY ?? "https://registry.npmjs.org";
-const attempts = Number(process.env.RELEASE_WAIT_ATTEMPTS ?? 12);
+const attempts = Number(process.env.RELEASE_WAIT_ATTEMPTS ?? 30);
 const interval = Number(process.env.RELEASE_WAIT_INTERVAL_MS ?? 10000);
 
 for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -44,7 +44,15 @@ function readDist(currentRegistry, name, version) {
   try {
     const output = execFileSync(
       "npm",
-      ["view", `${name}@${version}`, "dist", "--json", "--registry", currentRegistry],
+      [
+        "view",
+        `${name}@${version}`,
+        "dist",
+        "--json",
+        "--registry",
+        currentRegistry,
+        "--prefer-online",
+      ],
       { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
     );
     const value = JSON.parse(output);

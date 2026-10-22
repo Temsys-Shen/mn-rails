@@ -11,6 +11,8 @@ __INSTALL_COMMAND__
 可用命令：
 
 ```bash
+npm run lint
+npm run typecheck
 npm run check
 npm run build
 npm run package
@@ -22,7 +24,9 @@ npm run doctor
 
 ## 命令职责
 
-- `check` 运行当前框架的类型检查。
+- `lint` 运行 ESLint 与框架推荐规则。
+- `typecheck` 运行当前框架的类型检查。
+- `check` 依次运行 ESLint 与类型检查。
 - `build` 调用 Vite 构建页面，并检查插件目录与 `/pkg/` 引用。
 - `package` 生成 `.mnaddon` 与 `.mntemplate`。
 - `sync` 把 `dist` 安装到本机 MarginNote，并重启应用。
@@ -32,9 +36,11 @@ npm run doctor
 
 ```text
 ├── native/              # 混合形态的原生模块
+├── eslint/              # 当前框架的 ESLint 配置
 ├── public/              # Vite 原样复制的静态资源
 ├── src/                 # 页面代码
 ├── template/            # 场景模板配置与本地化文件
+├── eslint.config.mjs    # 共享 ESLint 配置
 ├── index.html           # 面板入口
 ├── mnaddon.json         # 插件清单
 └── vite.config.ts       # Vite 与 mn-rails 插件配置

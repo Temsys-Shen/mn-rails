@@ -90,6 +90,7 @@ export async function initProject(options: InitOptions): Promise<void> {
     __TEMPLATE_ID__: templateId,
     __INSTALL_COMMAND__: installCommand(packageManager),
     __PROJECT_KIND__: kind,
+    __PROJECT_HAS_NATIVE_BRIDGE__: kind === "hybrid" ? "true" : "false",
   });
 
   const spec = FRAMEWORKS[framework];
@@ -103,7 +104,10 @@ export async function initProject(options: InitOptions): Promise<void> {
       package: "mn-rails package",
       sync: "mn-rails deploy",
       doctor: "mn-rails doctor",
-      check: spec.checkCommand,
+      lint: "eslint . --max-warnings=0",
+      "lint:fix": "eslint . --fix",
+      typecheck: spec.typecheckCommand,
+      check: `eslint . --max-warnings=0 && ${spec.typecheckCommand}`,
     },
     dependencies: spec.dependencies,
     devDependencies: {

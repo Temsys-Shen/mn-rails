@@ -5,7 +5,7 @@ export interface FrameworkSpec {
   name: Framework;
   label: string;
   description: string;
-  checkCommand: string;
+  typecheckCommand: string;
   dependencies: Record<string, string>;
   devDependencies: Record<string, string>;
 }
@@ -24,14 +24,35 @@ const VERSIONS = {
   viteVue: "^6.0.10",
   viteSvelte: "^7.3.1",
   typescript: "5.9.3",
+  eslint: "^10.13.0",
+  eslintJs: "^10.0.1",
+  htmlEslint: "^0.67.0",
+  noUnsanitized: "^4.1.5",
+  globals: "^17.13.0",
+  typescriptEslint: "^8.72.0",
+  reactHooks: "^7.1.1",
+  vueEslint: "^10.11.1",
+  vueParser: "^10.4.1",
+  svelteEslint: "^3.23.1",
+  svelteParser: "^1.9.0",
 } as const;
+
+const ESLINT_DEPENDENCIES = {
+  "@eslint/js": VERSIONS.eslintJs,
+  "@html-eslint/eslint-plugin": VERSIONS.htmlEslint,
+  "@html-eslint/parser": VERSIONS.htmlEslint,
+  eslint: VERSIONS.eslint,
+  "eslint-plugin-no-unsanitized": VERSIONS.noUnsanitized,
+  globals: VERSIONS.globals,
+  "typescript-eslint": VERSIONS.typescriptEslint,
+};
 
 export const FRAMEWORKS: Record<Framework, FrameworkSpec> = {
   react: {
     name: "react",
     label: "React",
     description: "React 19 + TypeScript + Vite",
-    checkCommand: "tsc --noEmit",
+    typecheckCommand: "tsc --noEmit",
     dependencies: {
       react: VERSIONS.react,
       "react-dom": VERSIONS.reactDom,
@@ -42,13 +63,15 @@ export const FRAMEWORKS: Record<Framework, FrameworkSpec> = {
       "@vitejs/plugin-react": VERSIONS.viteReact,
       typescript: VERSIONS.typescript,
       vite: VERSIONS.vite,
+      ...ESLINT_DEPENDENCIES,
+      "eslint-plugin-react-hooks": VERSIONS.reactHooks,
     },
   },
   vue: {
     name: "vue",
     label: "Vue",
     description: "Vue 3 + TypeScript + Vite",
-    checkCommand: "vue-tsc --noEmit",
+    typecheckCommand: "vue-tsc --noEmit",
     dependencies: {
       vue: VERSIONS.vue,
     },
@@ -57,13 +80,16 @@ export const FRAMEWORKS: Record<Framework, FrameworkSpec> = {
       typescript: VERSIONS.typescript,
       vite: VERSIONS.vite,
       "vue-tsc": VERSIONS.vueTsc,
+      ...ESLINT_DEPENDENCIES,
+      "eslint-plugin-vue": VERSIONS.vueEslint,
+      "vue-eslint-parser": VERSIONS.vueParser,
     },
   },
   svelte: {
     name: "svelte",
     label: "Svelte",
     description: "Svelte 5 + TypeScript + Vite",
-    checkCommand: "svelte-check --tsconfig ./tsconfig.json",
+    typecheckCommand: "svelte-check --tsconfig ./tsconfig.json",
     dependencies: {
       svelte: VERSIONS.svelte,
     },
@@ -72,6 +98,9 @@ export const FRAMEWORKS: Record<Framework, FrameworkSpec> = {
       "svelte-check": VERSIONS.svelteCheck,
       typescript: VERSIONS.typescript,
       vite: VERSIONS.vite,
+      ...ESLINT_DEPENDENCIES,
+      "eslint-plugin-svelte": VERSIONS.svelteEslint,
+      "svelte-eslint-parser": VERSIONS.svelteParser,
     },
   },
 };

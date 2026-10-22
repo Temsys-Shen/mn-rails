@@ -53,12 +53,12 @@ export async function main(argv = process.argv): Promise<void> {
 
   program
     .command("deploy")
-    .description("部署到已安装的 MarginNote 并重启宿主")
+    .description("部署到已安装的 MarginNote 并重启应用")
     .action(deployCurrentProject);
 
   program
     .command("doctor")
-    .description("检查工程与宿主环境")
+    .description("检查工程与 MarginNote 环境")
     .option("--package-manager <name>", "npm、pnpm、yarn 或 bun")
     .action(async (options: { packageManager?: string }) => {
       await runDoctor(options);

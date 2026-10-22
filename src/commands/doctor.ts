@@ -36,7 +36,7 @@ export async function runDoctor(options: DoctorOptions = {}): Promise<void> {
   console.log(`项目：${projectRoot}`);
   console.log(`插件：${project.manifest.addonid}@${project.manifest.version}`);
   console.log(`形态：${project.mode === "hybrid" ? "混合形态" : "纯面板"}`);
-  console.log(`宿主：${host.appPath}（${hostVersion}，${host.processName}）`);
+  console.log(`MarginNote：${host.appPath}（${hostVersion}，${host.processName}）`);
   console.log(`模板：${template ? template.file : "未配置"}`);
 
   for (const required of [ADDON_MANIFEST, ADDON_ENTRY, "package.json", "vite.config.ts"]) {

@@ -38,4 +38,4 @@
 
 ## 文档来源
 
-宿主接口以当前安装的 MarginNote 与本地接口文档为准。实现前先核对 `mnaddon.json`、`/pkg/`、`window.mn` 与场景模板的实际契约。
+MarginNote 接口以当前安装的版本与本地接口文档为准。实现前先核对 `mnaddon.json`、`/pkg/`、`window.mn` 与场景模板的实际契约。

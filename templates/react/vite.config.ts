@@ -4,7 +4,7 @@ import { defineConfig } from "vite";
 import { mnRails } from "mn-rails/vite";
 
 export default defineConfig({
-  // 面板里的资源只能走宿主提供的 /pkg/ 路由。
+  // 面板里的资源只能走 MarginNote 提供的 /pkg/ 路径。
   base: "/pkg/",
   define: {
     __MN_NATIVE_BRIDGE__: JSON.stringify("__PROJECT_KIND__" === "hybrid"),

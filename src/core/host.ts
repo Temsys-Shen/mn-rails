@@ -162,7 +162,7 @@ end tell`;
   }
 
   fail(
-    `宿主未能重新启动：${host.appPath}`,
+    `MarginNote 未能重新启动：${host.appPath}`,
     "请手动打开 MarginNote，并检查应用是否被系统拦截。",
   );
 }

@@ -1,6 +1,6 @@
 {
   "name": "create-mn-rails",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "创建 MarginNote 面板插件工程",
   "type": "module",
   "bin": {

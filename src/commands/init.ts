@@ -4,6 +4,7 @@ import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { input, select } from "@inquirer/prompts";
+import { slugify } from "transliteration";
 
 import { fail, MnRailsError } from "../core/errors.js";
 import {
@@ -45,6 +46,8 @@ interface InitTargetOptions {
   projectDirectory?: string | undefined;
 }
 
+type ProjectDirectoryChooser = (defaultName: string) => Promise<string>;
+
 export interface InitTarget {
   targetDir: string;
   createsSubdirectory: boolean;
@@ -64,6 +67,7 @@ export async function initProject(options: InitOptions): Promise<void> {
       directory: options.directory,
       projectDirectory: projectDirectoryFromTitle(title),
     },
+    askProjectDirectory,
   );
   const projectName = toPackageName(basename(targetDir));
   const templateId = toTemplateId(addonid);
@@ -97,7 +101,7 @@ export async function initProject(options: InitOptions): Promise<void> {
     scripts: {
       build: "mn-rails build",
       package: "mn-rails package",
-      deploy: "mn-rails deploy",
+      sync: "mn-rails deploy",
       doctor: "mn-rails doctor",
       check: spec.checkCommand,
     },
@@ -135,6 +139,7 @@ export async function initProject(options: InitOptions): Promise<void> {
 
 export async function resolveInitTarget(
   options: InitTargetOptions,
+  chooseProjectDirectory: ProjectDirectoryChooser,
 ): Promise<InitTarget> {
   const invocationDir = resolve(
     options.invocationDir ?? process.env.INIT_CWD ?? process.cwd(),
@@ -156,7 +161,7 @@ export async function resolveInitTarget(
   }
 
   const projectDirectory = validateProjectDirectoryName(
-    options.projectDirectory ?? "mn-addon",
+    await chooseProjectDirectory(options.projectDirectory ?? "mn-addon"),
   );
   const subdirectory = resolve(invocationDir, projectDirectory);
   if (!(await isDirectoryEmpty(subdirectory))) {
@@ -246,6 +251,18 @@ async function askAuthor(): Promise<string> {
   return askRequired("作者");
 }
 
+async function askProjectDirectory(defaultName: string): Promise<string> {
+  const value = await input({
+    message: "项目目录",
+    default: defaultName,
+    validate: (inputValue) =>
+      isValidProjectDirectoryName(inputValue)
+        ? true
+        : "项目目录只能包含小写字母、数字和短横线，并且必须以字母或数字开头和结尾。",
+  });
+  return value.trim();
+}
+
 async function askRequired(message: string): Promise<string> {
   const value = await input({
     message,
@@ -257,28 +274,38 @@ async function askRequired(message: string): Promise<string> {
 
 function validateProjectDirectoryName(value: string): string {
   const name = value.trim();
-  if (
-    name === "" ||
-    name === "." ||
-    name === ".." ||
-    basename(name) !== name ||
-    /[\\/]/.test(name)
-  ) {
+  if (!isValidProjectDirectoryName(name)) {
     fail(
       `项目目录名称不合法：${value}`,
-      "项目目录必须是当前目录下的单层目录名称。",
+      "项目目录只能包含小写字母、数字和短横线，并且必须是当前目录下的单层目录名称。",
     );
   }
   return name;
 }
 
-function projectDirectoryFromTitle(title: string): string {
-  const name = title
-    .trim()
-    .replace(/[\\/:*?"<>|]/g, "-")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^[.-]+|[.-]+$/g, "");
+function isValidProjectDirectoryName(value: string): boolean {
+  const name = value.trim();
+  return (
+    name !== "" &&
+    name !== "." &&
+    name !== ".." &&
+    basename(name) === name &&
+    /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)
+  );
+}
+
+export function projectDirectoryFromTitle(title: string): string {
+  const name = slugify(title, {
+    separator: "-",
+    lowercase: true,
+    trim: true,
+    fixChineseSpacing: true,
+  })
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-+/g, "-");
   return name || "mn-addon";
 }
 

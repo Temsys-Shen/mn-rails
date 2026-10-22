@@ -18,7 +18,7 @@ export interface MnRailsOptions {
    */
   root?: string;
   /**
-   * 纯面板工程必须显式禁止 native/main.js，防止误切换宿主的加载方式。
+   * 纯面板工程必须显式禁止 native/main.js，防止误切换 MarginNote 的加载方式。
    */
   mode?: "panel" | "hybrid";
 }

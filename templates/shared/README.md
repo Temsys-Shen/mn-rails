@@ -14,19 +14,19 @@ __INSTALL_COMMAND__
 npm run check
 npm run build
 npm run package
-npm run deploy
+npm run sync
 npm run doctor
 ```
 
-使用 pnpm、yarn 或 bun 时，命令对应改为 `pnpm run`、`yarn run` 或 `bun run`。
+使用 pnpm 时，同步脚本可以直接运行 `pnpm sync`。使用 yarn 或 bun 时，命令对应改为 `yarn run sync` 或 `bun run sync`。
 
 ## 命令职责
 
 - `check` 运行当前框架的类型检查。
 - `build` 调用 Vite 构建页面，并检查插件目录与 `/pkg/` 引用。
 - `package` 生成 `.mnaddon` 与 `.mntemplate`。
-- `deploy` 把 `dist` 安装到本机 MarginNote，并重启宿主。
-- `doctor` 检查 Node、包管理器、工程清单、产物与宿主环境。
+- `sync` 把 `dist` 安装到本机 MarginNote，并重启应用。
+- `doctor` 检查 Node、包管理器、工程清单、产物与 MarginNote 环境。
 
 ## 工程结构
 

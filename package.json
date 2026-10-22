@@ -1,6 +1,6 @@
 {
   "name": "mn-rails",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "MarginNote 面板插件的现代脚手架",
   "type": "module",
   "bin": {
@@ -45,7 +45,8 @@
     "fflate": "^0.8.3",
     "parse5": "^8.0.1",
     "postcss": "^8.5.30",
-    "postcss-value-parser": "^4.2.0"
+    "postcss-value-parser": "^4.2.0",
+    "transliteration": "^2.6.2"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

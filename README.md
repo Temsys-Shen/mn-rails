@@ -2,13 +2,13 @@
 
 `mn-rails` 是 MarginNote 网页面板插件的脚手架。页面由 React、Vue 或 Svelte 与 Vite 构建，`mn-rails` 负责校验构建产物、整理插件目录、打包与部署。
 
-当前版本为 `2.0.0`。这个版本与 `1.x` 不兼容，不提供旧模板迁移，也不提供 `update` 命令。
+当前版本为 `2.0.1`。这个版本与 `1.x` 不兼容，不提供旧模板迁移，也不提供 `update` 命令。
 
 ## 能力
 
 - 支持纯面板与混合形态。
 - 提供 React 19、Vue 3、Svelte 5 的 TypeScript 模板。
-- 生成工程内置 `build`、`package`、`deploy`、`doctor` 与 `check` 命令。
+- 生成工程内置 `build`、`package`、`sync`、`doctor` 与 `check` 命令。
 - 同时支持 npm、pnpm、yarn 与 bun。
 - 构建产物中的脚本、样式、图片与字体全部通过 `/pkg/` 引用。
 - 混合形态保留 `main.js`，并由脚手架检查 `main.js` 与 `PanelBridge.js` 的边界。
@@ -29,7 +29,7 @@ npx mn-rails@latest init my-addon
 pnpm dlx mn-rails@latest init my-addon
 ```
 
-创建命令会询问框架、插件形态、插件名称、插件标识、作者与包管理器。不需要交互时，可以直接传入参数：
+创建命令会询问框架、插件形态、插件名称、插件标识、作者与包管理器。当前目录非空时，创建命令还会询问项目目录，默认值由插件名称转写为 kebab-case。不需要交互时，可以直接传入参数：
 
 ```bash
 npx mn-rails@latest init my-addon \
@@ -44,21 +44,23 @@ npx mn-rails@latest init my-addon \
 
 `--kind panel` 创建纯面板工程，`--kind hybrid` 创建面板与原生模块组成的混合形态工程。
 
-省略目录参数时，当前目录只有隐藏文件和隐藏目录，工程直接创建在当前目录；当前目录存在可见内容时，工程创建在当前目录下以插件名称命名的子目录中。显式传入其他非空目录时，创建命令拒绝写入。
+省略目录参数时，当前目录只有隐藏文件和隐藏目录，工程直接创建在当前目录；当前目录存在可见内容时，工程创建在当前目录下由用户确认的子目录中。显式传入其他非空目录时，创建命令拒绝写入。
 
 ## 工程命令
 
 ```bash
-pnpm check
-pnpm build
-pnpm package
-pnpm deploy
-pnpm doctor
+pnpm run check
+pnpm run build
+pnpm run package
+pnpm sync
+pnpm run doctor
 ```
 
-这些脚本分别映射到 `mn-rails` 的对应命令。`build` 调用 Vite 构建页面，随后检查产物；`package` 生成 `.mnaddon` 与 `.mntemplate`；`deploy` 把构建产物安装到本机 MarginNote 并重启宿主；`doctor` 检查工程、构建产物与宿主环境。
+这些脚本分别映射到 `mn-rails` 的对应命令。`build` 调用 Vite 构建页面，随后检查产物；`package` 生成 `.mnaddon` 与 `.mntemplate`；`sync` 把构建产物安装到本机 MarginNote 并重启应用；`doctor` 检查工程、构建产物与 MarginNote 环境。
 
-`mn-rails` 作为 `devDependency` 写入生成工程，版本范围为 `^2.0.0`。脚手架工具不会复制到业务工程中。
+`deploy` 是 pnpm 的内置命令。工程脚本改用 `sync`，命令行接口仍使用 `mn-rails deploy`。
+
+`mn-rails` 作为 `devDependency` 写入生成工程，版本范围为 `^2.0.1`。脚手架工具不会复制到业务工程中。
 
 本仓库的 `create-mn-rails` 位于 `create/` 工作区。发布时先发布根包，再发布 `create-mn-rails`；发布流程会改写工作区依赖的版本。
 
@@ -73,7 +75,7 @@ pnpm doctor
 - 纯面板产物不含根目录的 `main.js`。
 - 混合形态产物包含根目录的 `main.js` 与 `PanelBridge.js`。
 
-构建、打包、部署与 Vite 插件使用同一套产物审计。命令名称与页面接口沿用宿主定义，脚手架不增加别名。
+构建、打包、部署与 Vite 插件使用同一套产物审计。命令名称与页面接口沿用 MarginNote 定义，脚手架不增加别名。
 
 `public/` 中的文件由 Vite 复制到产物根目录。清单引用图标时写包根相对路径，例如 `"icon": "icon.png"`；脚手架会同时识别源目录的 `public/icon.png` 与构建后的 `dist/icon.png`。
 
@@ -81,7 +83,7 @@ pnpm doctor
 
 混合形态适合需要动态图标、菜单条件或其他原生能力的插件。`native/main.js` 是 JavaScriptCore 入口，其他原生模块由 `JSB.require` 载入。`native/PanelBridge.js` 创建网页面板，并通过 `onMessage` 接收页面命令。
 
-纯面板形态没有原生入口，面板与菜单由宿主根据 `mnaddon.json` 合成。纯面板模板不展示原生通道演示。
+纯面板形态没有原生入口，面板与菜单由 MarginNote 根据 `mnaddon.json` 合成。纯面板模板不展示原生通道演示。
 
 ## 模板与打包
 
@@ -111,8 +113,8 @@ pnpm release:pack
 发布由标签触发。先确认工作区干净，再执行：
 
 ```bash
-git tag v2.0.0
-git push origin v2.0.0
+git tag v2.0.1
+git push origin v2.0.1
 ```
 
 发布流程依次检查类型、测试、构建、包内容、标签与版本，上传 `mn-rails`，等待注册表可见，然后上传 `create-mn-rails`。两个包都使用 npm 的可信发布与 provenance 证明。发布完成后，工作流创建同名 GitHub Release，附带两个 tarball 与 `manifest.json`；重复运行发布会更新已有 Release 的附件。

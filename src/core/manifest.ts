@@ -99,7 +99,7 @@ export async function readAddonManifest(
   if (hasNativeEntry && options.allowHybrid === false) {
     fail(
       `纯面板工程出现了 ${relative(projectRoot, nativeEntry)}`,
-      "宿主看到 main.js 就会切换到旧加载方式，清单中的 icon、cardCommands 与 excerptClaim 会失效。",
+      "MarginNote 看到 main.js 就会切换到旧加载方式，清单中的 icon、cardCommands 与 excerptClaim 会失效。",
     );
   }
   const mode: PluginMode = hasNativeEntry ? "hybrid" : "panel";

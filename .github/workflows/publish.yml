@@ -8,7 +8,7 @@ on:
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
 
 jobs:
   publish:
@@ -53,6 +53,27 @@ jobs:
       - name: 等待 create-mn-rails 对注册表可见
         if: github.event_name == 'push'
         run: node scripts/wait-for-release.mjs create-mn-rails
+
+      - name: 发布 GitHub Release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" \
+              "$PWD/release/mn-rails.tgz" \
+              "$PWD/release/create-mn-rails.tgz" \
+              "$PWD/release/manifest.json" \
+              --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              "$PWD/release/mn-rails.tgz" \
+              "$PWD/release/create-mn-rails.tgz" \
+              "$PWD/release/manifest.json" \
+              --title "$GITHUB_REF_NAME" \
+              --generate-notes \
+              --verify-tag
+          fi
 
       - name: 输出发布摘要
         run: node scripts/release-summary.mjs

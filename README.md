@@ -113,9 +113,9 @@ git tag v2.0.0
 git push origin v2.0.0
 ```
 
-发布流程依次检查类型、测试、构建、包内容、标签与版本，上传 `mn-rails`，等待注册表可见，然后上传 `create-mn-rails`。两个包都使用 npm 的可信发布与 provenance 证明。
+发布流程依次检查类型、测试、构建、包内容、标签与版本，上传 `mn-rails`，等待注册表可见，然后上传 `create-mn-rails`。两个包都使用 npm 的可信发布与 provenance 证明。发布完成后，工作流创建同名 GitHub Release，附带两个 tarball 与 `manifest.json`；重复运行发布会更新已有 Release 的附件。
 
-`create-mn-rails` 首次发布之前，需要在 npm 网站上为这个包添加可信发布者配置。发布者指向本仓库的 GitHub Actions 工作流 `publish.yml`。
+`create-mn-rails` 已完成首次登记和可信发布配置。后续新增 npm 包时，仍需先完成一次人工发布，再添加指向本仓库 GitHub Actions 工作流 `publish.yml` 的可信发布者配置。
 
 ## 与旧版的关系
 

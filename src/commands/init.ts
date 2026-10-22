@@ -245,7 +245,6 @@ async function askAuthor(): Promise<string> {
 }
 
 async function askProjectDirectory(defaultName: string): Promise<string> {
-  console.log("当前目录不是空目录，工程将创建在当前目录的子目录中。");
   return input({
     message: "项目目录",
     default: defaultName,

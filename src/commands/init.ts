@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -39,20 +39,18 @@ export interface InitOptions {
   git?: boolean;
 }
 
-export async function initProject(options: InitOptions): Promise<void> {
-  const directory = options.directory ?? ".";
-  const targetDir = resolve(
-    directory === "." && process.env.INIT_CWD
-      ? process.env.INIT_CWD
-      : directory,
-  );
-  if (!(await isDirectoryEmpty(targetDir))) {
-    fail(
-      `目标目录不是空目录：${targetDir}`,
-      "请换一个目录，或在空目录中运行 mn-rails init。",
-    );
-  }
+interface InitTargetOptions {
+  directory?: string | undefined;
+  invocationDir?: string | undefined;
+  defaultProjectDirectory?: string | undefined;
+}
 
+export interface InitTarget {
+  targetDir: string;
+  createsSubdirectory: boolean;
+}
+
+export async function initProject(options: InitOptions): Promise<void> {
   const framework = await resolveFramework(options.framework);
   const kind = await resolveKind(options.kind);
   const title = options.title?.trim() || (await askTitle());
@@ -61,13 +59,20 @@ export async function initProject(options: InitOptions): Promise<void> {
   const packageManager = await resolveManager(options.packageManager);
 
   validateAddonId(addonid);
+  const { targetDir } = await resolveInitTarget(
+    {
+      directory: options.directory,
+      defaultProjectDirectory: defaultProjectDirectoryName(addonid),
+    },
+    askProjectDirectory,
+  );
   const projectName = toPackageName(basename(targetDir));
   const templateId = toTemplateId(addonid);
 
   await mkdir(targetDir, { recursive: true });
   await copyDirectory(templateRoot("shared"), targetDir);
   await copyDirectory(templateRoot(framework), targetDir);
-  await rename(join(targetDir, "gitignore"), join(targetDir, ".gitignore"));
+  await installGitignore(targetDir);
 
   if (kind === "hybrid") {
     await copyDirectory(templateRoot("native"), join(targetDir, "native"));
@@ -127,6 +132,43 @@ export async function initProject(options: InitOptions): Promise<void> {
   }
 
   printCreated(targetDir, framework, kind, packageManager, options.install !== false);
+}
+
+export async function resolveInitTarget(
+  options: InitTargetOptions,
+  chooseProjectDirectory: (defaultName: string) => Promise<string>,
+): Promise<InitTarget> {
+  const invocationDir = resolve(
+    options.invocationDir ?? process.env.INIT_CWD ?? process.cwd(),
+  );
+  const targetDir =
+    options.directory === undefined || options.directory === "."
+      ? invocationDir
+      : resolve(invocationDir, options.directory);
+
+  if (await isDirectoryEmpty(targetDir)) {
+    return { targetDir, createsSubdirectory: false };
+  }
+
+  if (targetDir !== invocationDir) {
+    fail(
+      `目标目录不是空目录：${targetDir}`,
+      "请换一个目录，或省略目录参数后在当前目录的子目录中创建工程。",
+    );
+  }
+
+  const projectDirectory = validateProjectDirectoryName(
+    await chooseProjectDirectory(options.defaultProjectDirectory ?? "mn-addon"),
+  );
+  const subdirectory = resolve(invocationDir, projectDirectory);
+  if (!(await isDirectoryEmpty(subdirectory))) {
+    fail(
+      `项目目录不是空目录：${subdirectory}`,
+      "请输入当前目录下其他可用的目录名称。",
+    );
+  }
+
+  return { targetDir: subdirectory, createsSubdirectory: true };
 }
 
 async function resolveFramework(value: string | undefined): Promise<Framework> {
@@ -200,6 +242,37 @@ async function askAuthor(): Promise<string> {
   const value = (await input({ message: "作者" })).trim();
   if (!value) fail("作者不能为空");
   return value;
+}
+
+async function askProjectDirectory(defaultName: string): Promise<string> {
+  console.log("当前目录不是空目录，工程将创建在当前目录的子目录中。");
+  return input({
+    message: "项目目录",
+    default: defaultName,
+  });
+}
+
+function validateProjectDirectoryName(value: string): string {
+  const name = value.trim();
+  if (
+    name === "" ||
+    name === "." ||
+    name === ".." ||
+    basename(name) !== name ||
+    /[\\/]/.test(name)
+  ) {
+    fail(
+      `项目目录名称不合法：${value}`,
+      "项目目录必须是当前目录下的单层目录名称。",
+    );
+  }
+  return name;
+}
+
+function defaultProjectDirectoryName(addonid: string): string {
+  const name = addonid.split(".").at(-1) ?? "";
+  const slug = toPackageName(name);
+  return slug === "mn-panel-addon" ? "mn-addon" : slug;
 }
 
 function validateAddonId(value: string): void {
@@ -289,8 +362,43 @@ function isTextFile(name: string): boolean {
   );
 }
 
+async function installGitignore(targetDir: string): Promise<void> {
+  const templatePath = join(targetDir, "gitignore");
+  const destinationPath = join(targetDir, ".gitignore");
+  if (!existsSync(destinationPath)) {
+    await rename(templatePath, destinationPath);
+    return;
+  }
+
+  const [template, existing] = await Promise.all([
+    readFile(templatePath, "utf8"),
+    readFile(destinationPath, "utf8"),
+  ]);
+  const existingRules = new Set(
+    existing
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean),
+  );
+  const additions = template
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== "" && !existingRules.has(line));
+
+  if (additions.length > 0) {
+    const prefix =
+      existing === "" || existing.endsWith("\n") ? existing : `${existing}\n`;
+    const separator =
+      prefix === "" || prefix.endsWith("\n\n") ? "" : "\n";
+    await writeFile(
+      destinationPath,
+      `${prefix}${separator}${additions.join("\n")}\n`,
+    );
+  }
+  await rm(templatePath, { force: true });
+}
+
 async function removeIfExists(path: string): Promise<void> {
-  const { rm } = await import("node:fs/promises");
   await rm(path, { recursive: true, force: true });
 }
 

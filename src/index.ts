@@ -25,7 +25,7 @@ export async function main(argv = process.argv): Promise<void> {
   program
     .command("init")
     .description("创建插件工程")
-    .argument("[directory]", "目标目录", ".")
+    .argument("[directory]", "目标目录")
     .option("--framework <name>", "react、vue 或 svelte")
     .option("--kind <name>", "panel 或 hybrid")
     .option("--addonid <id>", "插件标识")

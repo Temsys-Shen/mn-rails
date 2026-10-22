@@ -78,7 +78,7 @@ export async function listFiles(dir: string): Promise<string[]> {
 export async function isDirectoryEmpty(dir: string): Promise<boolean> {
   try {
     const entries = await readdir(dir);
-    return entries.every((name) => name === ".DS_Store");
+    return entries.every((name) => name.startsWith("."));
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
     if (code === "ENOENT") return true;

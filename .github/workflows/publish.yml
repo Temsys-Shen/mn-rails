@@ -40,7 +40,7 @@ jobs:
       # pnpm 负责在打包阶段改写 workspace:*；npm 负责上传，沿用本仓库已经验证过的 OIDC 发布路径。
       - name: 发布 mn-rails
         if: github.event_name == 'push'
-        run: npm publish "$PWD/release/mn-rails.tgz" --access public --provenance
+        run: node scripts/publish-if-missing.mjs mn-rails
 
       - name: 等待 mn-rails 对注册表可见
         if: github.event_name == 'push'
@@ -48,7 +48,7 @@ jobs:
 
       - name: 发布 create-mn-rails
         if: github.event_name == 'push'
-        run: npm publish "$PWD/release/create-mn-rails.tgz" --access public --provenance
+        run: node scripts/publish-if-missing.mjs create-mn-rails
 
       - name: 等待 create-mn-rails 对注册表可见
         if: github.event_name == 'push'

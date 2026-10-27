@@ -1,7 +1,7 @@
-import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { readDist } from "./registry.mjs";
 import { repositoryRoot } from "./release-metadata.mjs";
 
 const packageName = process.argv[2];
@@ -18,7 +18,7 @@ if (!expected) {
 }
 
 const registry = process.env.RELEASE_REGISTRY ?? "https://registry.npmjs.org";
-const attempts = Number(process.env.RELEASE_WAIT_ATTEMPTS ?? 30);
+const attempts = Number(process.env.RELEASE_WAIT_ATTEMPTS ?? 90);
 const interval = Number(process.env.RELEASE_WAIT_INTERVAL_MS ?? 10000);
 
 for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -39,25 +39,3 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
 }
 
 throw new Error(`${packageName}@${manifest.version} 在等待期限内没有出现在注册表`);
-
-function readDist(currentRegistry, name, version) {
-  try {
-    const output = execFileSync(
-      "npm",
-      [
-        "view",
-        `${name}@${version}`,
-        "dist",
-        "--json",
-        "--registry",
-        currentRegistry,
-        "--prefer-online",
-      ],
-      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
-    );
-    const value = JSON.parse(output);
-    return typeof value?.integrity === "string" ? value : undefined;
-  } catch {
-    return undefined;
-  }
-}

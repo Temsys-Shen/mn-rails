@@ -2,7 +2,7 @@
 
 `mn-rails` 是 MarginNote 网页面板插件的脚手架。页面由 React、Vue 或 Svelte 与 Vite 构建，`mn-rails` 负责校验构建产物、整理插件目录、打包与部署。
 
-当前版本为 `2.0.3`。这个版本与 `1.x` 不兼容，不提供旧模板迁移，也不提供 `update` 命令。
+当前版本为 `2.0.4`。这个版本与 `1.x` 不兼容，不提供旧模板迁移，也不提供 `update` 命令。
 
 ## 能力
 
@@ -65,7 +65,7 @@ pnpm run doctor
 
 `deploy` 是 pnpm 的内置命令。工程脚本改用 `sync`，命令行接口仍使用 `mn-rails deploy`。
 
-`mn-rails` 作为 `devDependency` 写入生成工程，版本范围为 `^2.0.3`。脚手架工具不会复制到业务工程中。
+`mn-rails` 作为 `devDependency` 写入生成工程，版本范围为 `^2.0.4`。脚手架工具不会复制到业务工程中。
 
 本仓库的 `create-mn-rails` 位于 `create/` 工作区。发布时先发布根包，再发布 `create-mn-rails`；发布流程会改写工作区依赖的版本。
 
@@ -118,8 +118,8 @@ pnpm release:pack
 发布由标签触发。先确认工作区干净，再执行：
 
 ```bash
-git tag v2.0.3
-git push origin v2.0.3
+git tag v2.0.4
+git push origin v2.0.4
 ```
 
 发布流程依次检查类型、测试、构建、包内容、标签与版本，上传 `mn-rails`，等待注册表可见，然后上传 `create-mn-rails`。发布包都使用 npm 的可信发布与 provenance 证明。发布完成后，工作流创建同名 GitHub Release，附带 tarball 与 `manifest.json`；重复运行发布会更新已有 Release 的附件。

@@ -47,6 +47,7 @@ try {
     "package/templates/svelte/eslint/framework.mjs",
     "package/templates/native/main.js",
     "package/templates/native/PanelBridge.js",
+    "package/templates/shared/.mcp.json",
     "package/templates/shared/AGENTS.md",
     "package/templates/shared/eslint.config.mjs",
     "package/templates/shared/gitignore",

@@ -40,11 +40,14 @@ npm run doctor
 ├── public/              # Vite 原样复制的静态资源
 ├── src/                 # 页面代码
 ├── template/            # 场景模板配置与本地化文件
+├── .mcp.json            # MarginNote 文档 MCP 配置
 ├── eslint.config.mjs    # 共享 ESLint 配置
 ├── index.html           # 面板入口
 ├── mnaddon.json         # 插件清单
 └── vite.config.ts       # Vite 与 mn-rails 插件配置
 ```
+
+`.mcp.json` 提供 `mn-docs` 文档服务。支持项目级 MCP 配置的客户端可以直接读取 `https://dev.marginnote.com.cn/mcp`。
 
 页面引用必须使用 `/pkg/` 开头的绝对路径。Vite 已配置固定文件名与关闭资源内联，业务代码不要改写这些约束。
 

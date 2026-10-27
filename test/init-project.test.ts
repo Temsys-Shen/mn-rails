@@ -59,6 +59,14 @@ describe("initProject", () => {
     const gitignore = await readFile(join(dir, ".gitignore"), "utf8");
     const viteConfig = await readFile(join(dir, "vite.config.ts"), "utf8");
     const agents = await readFile(join(dir, "AGENTS.md"), "utf8");
+    const mcpConfig = JSON.parse(
+      await readFile(join(dir, ".mcp.json"), "utf8"),
+    ) as {
+      mcpServers?: Record<
+        string,
+        { type?: string; url?: string }
+      >;
+    };
     const eslintConfig = await readFile(
       join(dir, "eslint.config.mjs"),
       "utf8",
@@ -86,6 +94,14 @@ describe("initProject", () => {
     expect(viteConfig).not.toContain("__PROJECT_HAS_NATIVE_BRIDGE__");
     expect(agents).toContain("# MarginNote 插件开发工程");
     expect(agents).toContain("https://dev.marginnote.com.cn/llms.txt");
+    expect(mcpConfig).toEqual({
+      mcpServers: {
+        "mn-docs": {
+          type: "http",
+          url: "https://dev.marginnote.com.cn/mcp",
+        },
+      },
+    });
     expect(agents).not.toContain("完成一轮代码编辑后使用 eslint 进行检查");
     expect(eslintConfig).toContain("frameworkConfig");
     expect(frameworkConfig).toContain("eslint-plugin-react-hooks");

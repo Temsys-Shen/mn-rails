@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "mn-docs": {
+      "type": "http",
+      "url": "https://dev.marginnote.com.cn/mcp"
+    }
+  }
+}

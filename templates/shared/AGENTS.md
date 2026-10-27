@@ -5,7 +5,7 @@
 
 ## 文档发现
 
-开发过程中有不确定的和 MN 相关的信息，请查阅：dev.marginnote.com.cn。该站为 AI 原生站，因此可以访问 [llms.txt](https://dev.marginnote.com.cn/llms.txt)
+开发过程中有不确定的和 MN 相关的信息，请查阅：dev.marginnote.com.cn。该站为 AI 原生站，因此可以访问 [llms.txt](https://dev.marginnote.com.cn/llms.txt)。工程根目录的 `.mcp.json` 已配置 `mn-docs` 文档服务，支持项目级 MCP 配置的客户端可以直接读取 `https://dev.marginnote.com.cn/mcp`。
 
 ## 工程化
 

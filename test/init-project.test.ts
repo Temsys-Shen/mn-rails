@@ -94,6 +94,15 @@ describe("initProject", () => {
     expect(viteConfig).not.toContain("__PROJECT_HAS_NATIVE_BRIDGE__");
     expect(agents).toContain("# MarginNote 插件开发工程");
     expect(agents).toContain("https://dev.marginnote.com.cn/llms.txt");
+    expect(agents).toContain("https://dev.marginnote.com.cn/mcp");
+    expect(agents).toContain("mn-docs");
+    expect(agents).toContain(
+      "https://github.com/Temsys-Shen/marginnote-extension-docs",
+    );
+    expect(agents).toContain("cardCommands");
+    expect(agents).toContain("events");
+    expect(agents).toContain("mn.call");
+    expect(agents).not.toContain("Objective-C");
     expect(mcpConfig).toEqual({
       mcpServers: {
         "mn-docs": {

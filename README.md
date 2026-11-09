@@ -2,14 +2,12 @@
 
 `mn-rails` 是 MarginNote 网页面板插件的脚手架。页面由 React、Vue 或 Svelte 与 Vite 构建，`mn-rails` 负责校验构建产物、整理插件目录、打包与部署。
 
-当前版本为 `2.0.4`。这个版本与 `1.x` 不兼容，不提供旧模板迁移，也不提供 `update` 命令。
-
 ## 能力
 
 - 支持纯面板与混合形态。
 - 提供 React 19、Vue 3、Svelte 5 的 TypeScript 模板。
 - 生成工程内置 `lint`、`typecheck`、`check`、`build`、`package`、`sync` 与 `doctor` 命令。
-- 生成工程包含 ESLint 配置，限制直接操作 DOM，并启用各框架推荐规则。
+- 生成工程包含 ESLint 配置，检查页面渲染与 DOM 操作，并启用各框架推荐规则。
 - 同时支持 npm、pnpm、yarn 与 bun。
 - 构建产物中的脚本、样式、图片与字体全部通过 `/pkg/` 引用。
 - 混合形态保留 `main.js`，并由脚手架检查 `main.js` 与 `PanelBridge.js` 的边界。
@@ -30,7 +28,7 @@ npx mn-rails@latest init my-addon
 pnpm dlx mn-rails@latest init my-addon
 ```
 
-创建命令会询问框架、插件形态、插件名称、插件标识、作者与包管理器。当前目录非空时，创建命令还会询问项目目录，默认值由插件名称转写为 kebab-case。不需要交互时，可以直接传入参数：
+创建命令会询问框架、插件形态、插件名称、插件标识、作者与包管理器。当前目录非空时，创建命令还会询问项目目录，默认值由插件名称转写为 kebab-case。需要非交互创建时，可以直接传入参数：
 
 ```bash
 npx mn-rails@latest init my-addon \
@@ -45,7 +43,7 @@ npx mn-rails@latest init my-addon \
 
 `--kind panel` 创建纯面板工程，`--kind hybrid` 创建面板与原生模块组成的混合形态工程。
 
-省略目录参数时，当前目录只有隐藏文件和隐藏目录，工程直接创建在当前目录；当前目录存在可见内容时，工程创建在当前目录下由用户确认的子目录中。显式传入其他非空目录时，创建命令拒绝写入。
+省略目录参数时，当前目录只有隐藏文件和隐藏目录，工程直接创建在当前目录；当前目录存在可见内容时，工程创建在当前目录下由用户确认的子目录中。显式传入其他非空目录时，请改用空目录或新目录。
 
 生成工程包含 `.mcp.json`，其中配置了 `mn-docs` 文档服务。支持项目级 MCP 配置的客户端可以直接读取 `https://dev.marginnote.com.cn/mcp`。
 
@@ -63,24 +61,23 @@ pnpm run doctor
 
 `lint` 执行 ESLint，`typecheck` 执行当前框架的类型检查，`check` 依次执行 ESLint 与类型检查。`build` 调用 Vite 构建页面，随后检查产物；`package` 生成 `.mnaddon` 与 `.mntemplate`；`sync` 把构建产物安装到本机 MarginNote 并重启应用；`doctor` 检查工程、构建产物与 MarginNote 环境。
 
-`deploy` 是 pnpm 的内置命令。工程脚本改用 `sync`，命令行接口仍使用 `mn-rails deploy`。
+工程内使用 `pnpm sync` 安装构建产物并重启 MarginNote；命令行接口中的对应操作为 `mn-rails deploy`。
 
-`mn-rails` 作为 `devDependency` 写入生成工程，版本范围为 `^2.0.4`。脚手架工具不会复制到业务工程中。
+`mn-rails` 作为生成工程的 `devDependency`，版本范围由创建命令写入 `package.json`。脚手架由包管理器安装，并随工程配置管理。
 
 本仓库的 `create-mn-rails` 位于 `create/` 工作区。发布时先发布根包，再发布 `create-mn-rails`；发布流程会改写工作区依赖的版本。
 
 ## 页面产物规则
 
-页面入口固定为根目录的 `index.html`。Vite 的基础路径固定为 `/pkg/`，构建产物必须满足以下规则：
+页面入口固定为根目录的 `index.html`。Vite 的基础路径固定为 `/pkg/`，构建产物采用以下约定：
 
-- 脚本、样式、图片与字体引用以 `/pkg/` 开头。
-- 不使用内联脚本、内联样式、`data:` 地址与内联事件属性。
-- 不使用 `eval`、`new Function` 与字符串形式的定时器。
+- 脚本、样式、图片与字体全部通过 `/pkg/` 下的文件地址引用。
+- 脚本与样式写入独立文件，页面事件通过 JavaScript 监听绑定。
+- JavaScript 使用静态模块和函数引用，定时器接收函数。
 - Vite 的每个构建入口都必须写入页面，脚本的模块图与构建清单一致。
-- 纯面板产物不含根目录的 `main.js`。
-- 混合形态产物包含根目录的 `main.js` 与 `PanelBridge.js`。
+- 纯面板产物由根目录的 `index.html` 及页面资源组成；混合形态产物在此基础上增加根目录的 `main.js` 与 `PanelBridge.js`。
 
-构建、打包、部署与 Vite 插件使用同一套产物审计。命令名称与页面接口沿用 MarginNote 定义，脚手架不增加别名。
+构建、打包、部署与 Vite 插件使用同一套产物审计。命令名称与页面接口沿用 MarginNote 定义。
 
 `public/` 中的文件由 Vite 复制到产物根目录。清单引用图标时写包根相对路径，例如 `"icon": "icon.png"`；脚手架会同时识别源目录的 `public/icon.png` 与构建后的 `dist/icon.png`。
 
@@ -88,7 +85,7 @@ pnpm run doctor
 
 混合形态适合需要动态图标、菜单条件或其他原生能力的插件。`native/main.js` 是 JavaScriptCore 入口，其他原生模块由 `JSB.require` 载入。`native/PanelBridge.js` 创建网页面板，并通过 `onMessage` 接收页面命令。
 
-纯面板形态没有原生入口，面板与菜单由 MarginNote 根据 `mnaddon.json` 合成。纯面板模板不展示原生通道演示。
+纯面板形态由 MarginNote 根据 `mnaddon.json` 合成面板与菜单，模板提供页面通道示例。原生通道演示位于混合形态模板。
 
 ## 模板与打包
 
@@ -118,14 +115,15 @@ pnpm release:pack
 发布由标签触发。先确认工作区干净，再执行：
 
 ```bash
-git tag v2.0.4
-git push origin v2.0.4
+VERSION="$(node -p "require('./package.json').version")"
+git tag "v${VERSION}"
+git push origin "v${VERSION}"
 ```
 
 发布流程依次检查类型、测试、构建、包内容、标签与版本，上传 `mn-rails`，等待注册表可见，然后上传 `create-mn-rails`。发布包都使用 npm 的可信发布与 provenance 证明。发布完成后，工作流创建同名 GitHub Release，附带 tarball 与 `manifest.json`；重复运行发布会更新已有 Release 的附件。
 
-`create-mn-rails` 已完成首次登记和可信发布配置。后续新增 npm 包时，仍需先完成一次人工发布，再添加指向本仓库 GitHub Actions 工作流 `publish.yml` 的可信发布者配置。
+`create-mn-rails` 已完成首次登记和可信发布配置。新增 npm 包时，先完成一次人工发布，再添加指向本仓库 GitHub Actions 工作流 `publish.yml` 的可信发布者配置。
 
-## 与旧版的关系
+## 从 1.x 升级
 
-`mn-rails@2` 不保留 `mn-rails@1` 的 `standard`、`web` 模板，也不提供模板更新命令。旧工程需要新建 v2 工程并迁移业务代码。
+`mn-rails@2` 采用新的模板结构。1.x 工程升级时，先创建 2.x 工程，再把业务代码迁入新模板。

@@ -54,7 +54,7 @@
 
 ### 原生能力
 
-混合形态的工程带有 `native/` 目录，入口文件为 `native/main.js`。`native/main.js` 运行在 JavaScriptCore 环境中，JavaScriptCore 环境不提供浏览器接口。`native/PanelBridge.js` 创建网页面板，`native/main.js` 用 `JSB.require("PanelBridge")` 载入该模块。页面调用 `mn.call` 发出请求，`native/main.js` 中的 `panel.onMessage` 接收请求。`onMessage` 的返回值序列化之后作为 `mn.call` 的结果返回页面，返回值必须可以序列化为 JSON。原生模块使用 `JSB.require` 组织依赖，不使用 `import` 与 `export`。
+混合形态的工程带有 `native/` 目录，入口文件为 `native/main.js`。`native/main.js` 运行在 JavaScriptCore 环境中，JavaScriptCore 环境不提供浏览器接口。`native/PanelBridge.js` 创建网页面板，`native/main.js` 用 `JSB.require("PanelBridge")` 载入该模块。页面调用 `mn.call` 发出请求，`native/main.js` 中的 `panel.onMessage` 接收请求。`onMessage` 的返回值序列化之后作为 `mn.call` 的结果返回页面，返回值必须可以序列化为 JSON。原生模块使用 `JSB.require` 组织依赖，不使用 `import` 与 `export`。MN 里所有插件的原生 JS 共用一个全局环境，顶层声明的函数和变量会被其他插件的同名声明覆盖，也会覆盖别人的：原生模块包在闭包里，只通过 `MNRails["<addonid>"]` 或带插件前缀的名字对外暴露，不要在顶层声明 `handlePanelMessage` 这类通用名字。
 
 ## 面板尺寸与模式
 

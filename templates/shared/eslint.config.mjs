@@ -28,7 +28,7 @@ const NATIVE_GLOBALS = [
   "self",
   "Application",
   "AddonWebPanel",
-  "createPanelAddon",
+  "MNRails",
   "console",
 ];
 
